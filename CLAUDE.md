@@ -52,11 +52,11 @@ src/
 - `/customer/*`, `/staff/*`, and `/admin/*` are protected by `ProtectedRoute` and the user's role.
 - After login, redirect to the dashboard for the user's role.
 
-| Role | What they do |
-|---|---|
+| Role     | What they do                                                                                                                                                                            |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | customer | View their account and balance, cash in, transfer, view transaction history, cancel own pending transactions, manage profile and notification preferences, view and clear notifications |
-| staff | View customers and accounts, verify customers, view all transactions, flag or cancel suspicious transactions, freeze or reactivate accounts |
-| admin | Everything staff can view, plus create staff accounts, change user roles and status, view audit logs and notification logs |
+| staff    | View customers and accounts, verify customers, view all transactions, flag or cancel suspicious transactions, freeze or reactivate accounts                                             |
+| admin    | Everything staff can view, plus create staff accounts, change user roles and status, view audit logs and notification logs                                                              |
 
 ## Domain decisions
 
@@ -66,23 +66,38 @@ src/
   - `transfer`: sends funds to another account by account number. Must check: amount > 0, sufficient balance, both accounts active, not the same account.
 - **Transaction statuses:** `pending`, `completed`, `failed`, `cancelled`, `flagged`.
 - **Account statuses:** `active`, `frozen`, `closed`.
-- **User statuses:** `active`, `deactivated`, `disabled`, `closed`.
+- **User statuses:** `active`, `deactivated` (by the customer), `disabled` or `closed` (by an admin).
+- **Cancelled transactions are never deleted.** They stay on record with status `cancelled`.
+
+## Data shapes (from the backend's Mongoose schemas)
+
+Mock data must use these exact field names. IDs are strings (`_id`); dates are ISO strings; amounts and balances are integers in centavos.
+
+- **User:** `_id`, `name`, `email`, `contactNumber`, `role` (`customer` | `staff` | `admin`), `status`, `isVerified` (boolean), `notificationPreferences` (`{ email: true, sms: false }`), `createdAt`, `updatedAt`. Never expose `passwordHash`.
+- **BankAccount:** `_id`, `accountNumber`, `owner` (user `_id`), `balance`, `status` (`active` | `frozen` | `closed`), `createdAt`.
+- **Transaction:** `_id`, `referenceNumber`, `transactionType` (`cash_in` | `transfer`), `amount`, `sourceAccount` (empty for `cash_in`), `destinationAccount`, `performedBy` (user `_id`), `status`, `flagReason` (optional), `createdAt`, `updatedAt`.
+- **Notification:** `_id`, `recipient` (user `_id`), `type` (`transaction` | `account` | `security` | `system`), `message`, `relatedTransaction` (optional), `isRead` (boolean), `createdAt`.
+- **AuditLog:** `_id`, `actor` (user `_id`), `action`, `targetType` (`User` | `BankAccount` | `Transaction`), `targetId`, `createdAt`.
 
 ## Backend endpoints (base: `VITE_API_URL`)
 
 **Auth**
+
 - `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`
 
 **Customer profile**
+
 - `PATCH /users/me` (name, email, contact number)
 - `PATCH /users/me/password`
 - `PATCH /users/me/notification-preferences`
 - `PATCH /users/me/deactivate`
 
 **Accounts**
+
 - `GET /accounts/me`, `GET /accounts/me/balance`, `GET /accounts/:id`
 
 **Transactions**
+
 - `POST /transactions/cash-in`
 - `POST /transactions/transfer`
 - `GET /transactions`
@@ -90,11 +105,13 @@ src/
 - `PATCH /transactions/:id/cancel`
 
 **Notifications**
+
 - `GET /notifications`
 - `PATCH /notifications/:id/read`, `PATCH /notifications/read-all`
 - `DELETE /notifications/:id`, `DELETE /notifications`
 
 **Admin / staff**
+
 - `POST /admin/staff` (admin)
 - `GET /admin/users`, `GET /admin/users/:id` (admin, staff)
 - `PATCH /admin/users/:id/status` (admin)
