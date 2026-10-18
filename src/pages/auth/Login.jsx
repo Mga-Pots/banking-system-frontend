@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import AuthLayout from '../../components/auth/AuthLayout'
 import PasswordInput from '../../components/auth/PasswordInput'
+import RequiredMark from '../../components/auth/RequiredMark'
 import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from '../../components/auth/styles'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -55,9 +56,10 @@ export default function Login() {
 
         <div className="flex flex-col gap-2">
           <label htmlFor="email" className={labelClass}>
-            Email
+            Email <RequiredMark />
           </label>
           <input
+            aria-required="true"
             id="email"
             type="email"
             autoComplete="email"
@@ -70,9 +72,10 @@ export default function Login() {
 
         <div className="flex flex-col gap-2">
           <label htmlFor="password" className={labelClass}>
-            Password
+            Password <RequiredMark />
           </label>
           <PasswordInput
+            required
             id="password"
             autoComplete="current-password"
             placeholder="Enter your password"

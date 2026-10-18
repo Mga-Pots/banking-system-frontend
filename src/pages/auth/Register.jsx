@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import AuthLayout from '../../components/auth/AuthLayout'
 import PasswordInput from '../../components/auth/PasswordInput'
+import RequiredMark from '../../components/auth/RequiredMark'
 import { fieldErrorClass, inputClass, labelClass, linkClass, primaryButtonClass } from '../../components/auth/styles'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -126,9 +127,10 @@ export default function Register() {
 
         <div className="flex flex-col gap-2">
           <label htmlFor="register-name" className={labelClass}>
-            Full name
+            Full name <RequiredMark />
           </label>
           <input
+            aria-required="true"
             id="register-name"
             autoComplete="name"
             placeholder="Juan Dela Cruz"
@@ -142,9 +144,10 @@ export default function Register() {
 
         <div className="flex flex-col gap-2">
           <label htmlFor="register-email" className={labelClass}>
-            Email
+            Email <RequiredMark />
           </label>
           <input
+            aria-required="true"
             id="register-email"
             type="email"
             autoComplete="email"
@@ -159,13 +162,14 @@ export default function Register() {
 
         <div className="flex flex-col gap-2">
           <label htmlFor="register-mobile" className={labelClass}>
-            Mobile number
+            Mobile number <RequiredMark />
           </label>
           <div className="flex gap-2">
             <span className="flex h-13 items-center rounded-2xl border-[1.5px] border-line bg-ground px-3.5 text-[15px] font-bold">
               +63
             </span>
             <input
+              aria-required="true"
               id="register-mobile"
               type="tel"
               inputMode="numeric"
@@ -182,9 +186,10 @@ export default function Register() {
 
         <div className="flex flex-col gap-2">
           <label htmlFor="register-password" className={labelClass}>
-            Password
+            Password <RequiredMark />
           </label>
           <PasswordInput
+            required
             id="register-password"
             autoComplete="new-password"
             placeholder="Create a password"
@@ -206,9 +211,10 @@ export default function Register() {
 
         <div className="flex flex-col gap-2">
           <label htmlFor="register-confirmPassword" className={labelClass}>
-            Confirm password
+            Confirm password <RequiredMark />
           </label>
           <PasswordInput
+            required
             id="register-confirmPassword"
             autoComplete="new-password"
             placeholder="Type it again"

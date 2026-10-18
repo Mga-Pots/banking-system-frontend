@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { inputClass } from './styles'
 
 // Password field with a Show/Hide button.
-export default function PasswordInput({ id, value, onChange, placeholder, autoComplete, describedBy, invalid }) {
+export default function PasswordInput({ id, value, onChange, placeholder, autoComplete, describedBy, invalid, required }) {
   const [visible, setVisible] = useState(false)
 
   return (
@@ -15,6 +15,7 @@ export default function PasswordInput({ id, value, onChange, placeholder, autoCo
         value={value}
         onChange={onChange}
         aria-invalid={invalid || undefined}
+        aria-required={required || undefined}
         aria-describedby={describedBy}
         className={`${inputClass} pr-[72px]`}
       />
