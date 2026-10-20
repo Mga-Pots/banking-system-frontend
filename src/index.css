@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+/* sinop design tokens. Use them as Tailwind classes, e.g. bg-forest, text-ink, font-brand */
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-brand: "Sora", ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #14532d;
+  --color-forest: #064e3b;
+  --color-wallet: #15803d;
+  --color-bright: #22c55e;
+  --color-mint-top: #a9e6c4;
+  --color-mint-mid: #d4f4e2;
+  --color-ground: #f2faf5;
+  --color-text: #0f172a;
+  --color-muted: #5b6475;
+  --color-label: #334155;
+  --color-line: #d3e2d9;
+  --color-placeholder: #7a8494;
+  --color-error: #b91c1c;
+}

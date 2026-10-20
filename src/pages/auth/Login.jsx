@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import AuthLayout from '../../components/auth/AuthLayout'
+import PasswordInput from '../../components/auth/PasswordInput'
+import RequiredMark from '../../components/auth/RequiredMark'
+import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from '../../components/auth/styles'
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export default function Login() {
   const { login, role } = useAuth()
@@ -14,10 +20,21 @@ export default function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    const trimmedEmail = email.trim()
+    if (!EMAIL_PATTERN.test(trimmedEmail)) {
+      setError('Enter a valid email address, like juan@email.com.')
+      return
+    }
+    if (!password) {
+      setError('Enter your password.')
+      return
+    }
+
     setError('')
     setLoading(true)
     try {
-      const user = await login({ email, password })
+      const user = await login({ email: trimmedEmail, password })
       navigate(`/${user.role}`, { replace: true })
     } catch (err) {
       setError(err.response?.data?.message ?? err.message)
@@ -27,28 +44,64 @@ export default function Login() {
   }
 
   return (
-    <div>
-      <h1>Login</h1>
-      <form onSubmit={handleSubmit}>
+    <AuthLayout
+      title="Save a little, every day."
+      subtitle="Send money, cash in, and keep track of every peso, all in one place."
+    >
+      <form className="flex w-full max-w-[400px] flex-col gap-5" onSubmit={handleSubmit} noValidate>
         <div>
-          <label>
-            Email <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </label>
+          <h2 className="mb-1.5 text-[30px] font-extrabold tracking-[-0.8px]">Log in to sinop</h2>
+          <p className="text-[15px] text-muted">Welcome back! Enter your details to continue.</p>
         </div>
-        <div>
-          <label>
-            Password{' '}
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="email" className={labelClass}>
+            Email <RequiredMark />
           </label>
+          <input
+            aria-required="true"
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={inputClass}
+          />
         </div>
-        {error && <p>{error}</p>}
-        <button type="submit" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="password" className={labelClass}>
+            Password <RequiredMark />
+          </label>
+          <PasswordInput
+            required
+            id="password"
+            autoComplete="current-password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+
+        {error && (
+          <p className="-mt-1.5 text-[13px] font-semibold text-error" role="alert">
+            {error}
+          </p>
+        )}
+
+        <button type="submit" disabled={loading} className={`${primaryButtonClass} cursor-pointer`}>
+          {loading ? 'Logging in...' : 'Log in'}
         </button>
+
+        <div className="flex items-center gap-3 text-[13px] text-muted before:h-px before:flex-1 before:bg-[#e2e6ef] after:h-px after:flex-1 after:bg-[#e2e6ef]">
+          or
+        </div>
+
+        <Link to="/register" className={secondaryButtonClass}>
+          Create an account
+        </Link>
       </form>
-      <p>
-        No account? <Link to="/register">Register</Link>
-      </p>
-    </div>
+    </AuthLayout>
   )
 }
