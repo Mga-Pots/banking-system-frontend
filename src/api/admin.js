@@ -13,7 +13,7 @@ const ROLES = ['customer', 'staff', 'admin']
 
 // Looks up `id` in `list`, checks `value` is allowed, sets `field`, and returns the updated copy.
 const setMockField = (list, id, field, value, allowed, label) => {
-  const item = list.find((x) => x.id === id)
+  const item = list.find((x) => x._id === id)
   if (!item) return mockError(`${label} not found`)
   if (!allowed.includes(value)) return mockError(`Invalid ${field}`)
   item[field] = value
@@ -23,17 +23,21 @@ const setMockField = (list, id, field, value, allowed, label) => {
 // admin only
 export const createStaff = async ({ name, email, password }) => {
   if (USE_MOCK) {
-    if (users.some((u) => u.email === email)) return mockError('Email already registered')
+    const normalized = email.toLowerCase().trim()
+    if (users.some((u) => u.email === normalized)) return mockError('Email already used')
+    const now = new Date().toISOString()
     const id = `u${Date.now()}`
+    // No contactNumber: it's optional, and staff accounts are created without one
     const staff = {
-      id,
-      name,
-      email,
-      contactNumber: '',
+      _id: id,
+      name: name.trim(),
+      email: normalized,
       role: 'staff',
       status: 'active',
-      verified: true,
+      isVerified: true,
       notificationPreferences: { email: true, sms: false },
+      createdAt: now,
+      updatedAt: now,
       token: `mock-token-${id}`,
     }
     users.push(staff)
@@ -51,7 +55,7 @@ export const getUsers = async () => {
 // admin, staff
 export const getUserById = async (id) => {
   if (USE_MOCK) {
-    const user = users.find((u) => u.id === id)
+    const user = users.find((u) => u._id === id)
     return user ? mockResponse(withoutToken(user)) : mockError('User not found')
   }
   return (await api.get(`/admin/users/${id}`)).data
@@ -71,7 +75,7 @@ export const updateUserRole = async (id, role) => {
 
 // admin, staff
 export const verifyUser = async (id) => {
-  if (USE_MOCK) return setMockField(users, id, 'verified', true, [true], 'User')
+  if (USE_MOCK) return setMockField(users, id, 'isVerified', true, [true], 'User')
   return (await api.patch(`/admin/users/${id}/verify`)).data
 }
 

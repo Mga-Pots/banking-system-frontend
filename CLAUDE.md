@@ -73,9 +73,9 @@ src/
 
 Mock data must use these exact field names. IDs are strings (`_id`); dates are ISO strings; amounts and balances are integers in centavos.
 
-- **User:** `_id`, `name`, `email`, `contactNumber`, `role` (`customer` | `staff` | `admin`), `status`, `isVerified` (boolean), `notificationPreferences` (`{ email: true, sms: false }`), `createdAt`, `updatedAt`. Never expose `passwordHash`.
-- **BankAccount:** `_id`, `accountNumber`, `owner` (user `_id`), `balance`, `status` (`active` | `frozen` | `closed`), `createdAt`.
-- **Transaction:** `_id`, `referenceNumber`, `transactionType` (`cash_in` | `transfer`), `amount`, `sourceAccount` (empty for `cash_in`), `destinationAccount`, `performedBy` (user `_id`), `status`, `flagReason` (optional), `createdAt`, `updatedAt`.
+- **User:** `_id`, `name`, `email`, `contactNumber` (optional; omitted when not set, never sent as `""`), `role` (`customer` | `staff` | `admin`), `status`, `isVerified` (boolean), `notificationPreferences` (`{ email: true, sms: false }`), `createdAt`, `updatedAt`. Never expose `passwordHash`.
+- **BankAccount:** `_id`, `accountNumber`, `owner` (user `_id`), `balance`, `status` (`active` | `frozen` | `closed`), `createdAt`, `updatedAt`.
+- **Transaction:** `_id`, `referenceNumber`, `transactionType` (`cash_in` | `transfer`), `amount`, `sourceAccount` (account `_id`; empty for `cash_in`), `destinationAccount` (account `_id`), `performedBy` (user `_id`), `status`, `flagReason` (`null` unless flagged), `createdAt`, `updatedAt`.
 - **Notification:** `_id`, `recipient` (user `_id`), `type` (`transaction` | `account` | `security` | `system`), `message`, `relatedTransaction` (optional), `isRead` (boolean), `createdAt`.
 - **AuditLog:** `_id`, `actor` (user `_id`), `action`, `targetType` (`User` | `BankAccount` | `Transaction`), `targetId`, `createdAt`.
 

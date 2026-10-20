@@ -111,10 +111,10 @@ export default function Register() {
         email: form.email.trim(),
         password: form.password,
         // Saved like the mock data: 09171234567
-        // Optional: send '' if left blank
+        // Optional: left out (undefined) if blank, never sent as ''
         contactNumber: form.mobile.trim()
           ? `0${toLocalMobile(form.mobile)}`
-          : "",
+          : undefined,
       });
       navigate(`/${user.role}`, { replace: true });
     } catch (err) {

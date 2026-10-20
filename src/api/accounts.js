@@ -4,7 +4,7 @@ import { accounts } from '../mocks/accounts'
 
 const getMyMockAccount = () => {
   const user = getMockUser()
-  return accounts.find((a) => a.userId === user?.id)
+  return accounts.find((a) => a.owner === user?._id)
 }
 
 export const getMyAccount = async () => {
@@ -25,7 +25,7 @@ export const getMyBalance = async () => {
 
 export const getAccountById = async (id) => {
   if (USE_MOCK) {
-    const account = accounts.find((a) => a.id === id)
+    const account = accounts.find((a) => a._id === id)
     return account ? mockResponse({ ...account }) : mockError('Account not found')
   }
   return (await api.get(`/accounts/${id}`)).data

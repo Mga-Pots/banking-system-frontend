@@ -4,7 +4,7 @@ import { notifications } from '../mocks/notifications'
 
 const myMockNotifications = () => {
   const user = getMockUser()
-  return notifications.filter((n) => n.userId === user?.id)
+  return notifications.filter((n) => n.recipient === user?._id)
 }
 
 const removeFromMock = (predicate) => {
@@ -20,9 +20,9 @@ export const getMyNotifications = async () => {
 
 export const markAsRead = async (id) => {
   if (USE_MOCK) {
-    const note = myMockNotifications().find((n) => n.id === id)
+    const note = myMockNotifications().find((n) => n._id === id)
     if (!note) return mockError('Notification not found')
-    note.read = true
+    note.isRead = true
     return mockResponse({ ...note })
   }
   return (await api.patch(`/notifications/${id}/read`)).data
@@ -31,7 +31,7 @@ export const markAsRead = async (id) => {
 export const markAllAsRead = async () => {
   if (USE_MOCK) {
     myMockNotifications().forEach((n) => {
-      n.read = true
+      n.isRead = true
     })
     return mockResponse(null)
   }
@@ -40,9 +40,9 @@ export const markAllAsRead = async () => {
 
 export const deleteNotification = async (id) => {
   if (USE_MOCK) {
-    const note = myMockNotifications().find((n) => n.id === id)
+    const note = myMockNotifications().find((n) => n._id === id)
     if (!note) return mockError('Notification not found')
-    removeFromMock((n) => n.id === id)
+    removeFromMock((n) => n._id === id)
     return mockResponse(null)
   }
   return (await api.delete(`/notifications/${id}`)).data
@@ -51,7 +51,7 @@ export const deleteNotification = async (id) => {
 export const clearNotifications = async () => {
   if (USE_MOCK) {
     const user = getMockUser()
-    removeFromMock((n) => n.userId === user?.id)
+    removeFromMock((n) => n.recipient === user?._id)
     return mockResponse(null)
   }
   return (await api.delete('/notifications')).data

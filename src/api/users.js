@@ -3,11 +3,14 @@ import { USE_MOCK, mockResponse, mockError, getMockUser, withoutToken } from './
 
 // Customer profile endpoints (/users/me/...).
 
+// contactNumber is optional: pass undefined to leave it out.
 export const updateMe = async ({ name, email, contactNumber }) => {
   if (USE_MOCK) {
     const user = getMockUser()
     if (!user) return mockError('Not authenticated')
-    Object.assign(user, { name, email, contactNumber })
+    Object.assign(user, { name, email: email.toLowerCase().trim(), updatedAt: new Date().toISOString() })
+    if (contactNumber) user.contactNumber = contactNumber
+    else delete user.contactNumber
     return mockResponse(withoutToken(user))
   }
   return (await api.patch('/users/me', { name, email, contactNumber })).data

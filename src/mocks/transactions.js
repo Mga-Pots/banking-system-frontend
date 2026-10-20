@@ -1,34 +1,46 @@
-// type: "cash_in" | "transfer". Amounts are integers in centavos.
-// cash_in has no fromAccount (simulated funds); transfer has both.
+// transactionType: "cash_in" | "transfer". Amounts are integers in centavos.
+// sourceAccount and destinationAccount are account _ids.
+// cash_in has no sourceAccount (simulated funds); transfer has both.
+// performedBy is the user _id. flagReason is null unless the transaction is flagged.
+// status: "pending" | "completed" | "failed" | "cancelled" | "flagged"
 export const transactions = [
   {
-    id: 't1',
-    type: 'cash_in',
+    _id: 't1',
+    referenceNumber: 'TXN-20261001-0915',
+    transactionType: 'cash_in',
     amount: 1000000,
+    sourceAccount: null,
+    destinationAccount: 'a1',
+    performedBy: 'u1',
     status: 'completed',
-    fromAccount: null,
-    toAccount: '1001-2345-6789',
-    description: 'Cash in',
+    flagReason: null,
     createdAt: '2026-10-01T09:15:00.000Z',
+    updatedAt: '2026-10-01T09:15:00.000Z',
   },
   {
-    id: 't2',
-    type: 'transfer',
+    _id: 't2',
+    referenceNumber: 'TXN-20261005-1430',
+    transactionType: 'transfer',
     amount: 250000,
+    sourceAccount: 'a1',
+    destinationAccount: 'a2',
+    performedBy: 'u1',
     status: 'completed',
-    fromAccount: '1001-2345-6789',
-    toAccount: '1001-9876-5432',
-    description: 'Rent share',
+    flagReason: null,
     createdAt: '2026-10-05T14:30:00.000Z',
+    updatedAt: '2026-10-05T14:30:00.000Z',
   },
   {
-    id: 't3',
-    type: 'transfer',
+    _id: 't3',
+    referenceNumber: 'TXN-20261012-1100',
+    transactionType: 'transfer',
     amount: 50000,
+    sourceAccount: 'a1',
+    destinationAccount: 'a2',
+    performedBy: 'u1',
     status: 'pending',
-    fromAccount: '1001-2345-6789',
-    toAccount: '1001-9876-5432',
-    description: 'Lunch',
+    flagReason: null,
     createdAt: '2026-10-12T11:00:00.000Z',
+    updatedAt: '2026-10-12T11:00:00.000Z',
   },
 ]
