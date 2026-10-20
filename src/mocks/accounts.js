@@ -1,10 +1,11 @@
 // One account per customer. Balances are integers in centavos (₱25,000.00 = 2500000).
+// accountNumber is 12 digits with no spaces (format it only for display).
 // owner is the user's _id.
 // status: "active" | "frozen" | "closed"
 export const accounts = [
   {
     _id: 'a1',
-    accountNumber: '1001-2345-6789',
+    accountNumber: '001234567890',
     owner: 'u1',
     balance: 2500000,
     status: 'active',
@@ -13,7 +14,7 @@ export const accounts = [
   },
   {
     _id: 'a2',
-    accountNumber: '1001-9876-5432',
+    accountNumber: '009876543210',
     owner: 'u4',
     balance: 1000000,
     status: 'active',

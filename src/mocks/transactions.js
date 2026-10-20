@@ -1,7 +1,10 @@
 // transactionType: "cash_in" | "transfer". Amounts are integers in centavos.
 // sourceAccount and destinationAccount are account _ids.
 // cash_in has no sourceAccount (simulated funds); transfer has both.
-// performedBy is the user _id. flagReason is null unless the transaction is flagged.
+// performedBy is the user _id.
+// flagReason is null unless the transaction is flagged, or is a transfer held as
+// pending for review ("Held for staff review"). A held transfer has already been
+// taken from the sender but not yet given to the recipient.
 // status: "pending" | "completed" | "failed" | "cancelled" | "flagged"
 export const transactions = [
   {
@@ -39,7 +42,7 @@ export const transactions = [
     destinationAccount: 'a2',
     performedBy: 'u1',
     status: 'pending',
-    flagReason: null,
+    flagReason: 'Held for staff review',
     createdAt: '2026-10-12T11:00:00.000Z',
     updatedAt: '2026-10-12T11:00:00.000Z',
   },

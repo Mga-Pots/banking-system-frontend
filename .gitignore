@@ -36,3 +36,6 @@ dist-ssr
 .gemini/
 .impeccable/
 PRODUCT.md
+
+# Local notes
+docs/alignment-fixes.md

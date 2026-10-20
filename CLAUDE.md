@@ -64,6 +64,9 @@ src/
 - **Transactions have only two types: `cash_in` and `transfer`.** There is **no cash-out or withdrawal** feature. Do not create functions, mock data, or UI for it.
   - `cash_in`: adds simulated funds to the customer's own account (no real money).
   - `transfer`: sends funds to another account by account number. Must check: amount > 0, sufficient balance, both accounts active, not the same account.
+  - Transfers complete immediately unless held for review (`holdForReview: true`, or at/above a backend limit that is still being confirmed). A held transfer is `pending` with `flagReason: "Held for staff review"`: the sender is already charged, the recipient isn't credited yet.
+  - Only the sender can cancel, and only a `pending` transfer; the amount is refunded to the sender.
+  - Customers don't see incoming transfers until they're `completed`.
 - **Transaction statuses:** `pending`, `completed`, `failed`, `cancelled`, `flagged`.
 - **Account statuses:** `active`, `frozen`, `closed`.
 - **User statuses:** `active`, `deactivated` (by the customer), `disabled` or `closed` (by an admin).
@@ -74,8 +77,8 @@ src/
 Mock data must use these exact field names. IDs are strings (`_id`); dates are ISO strings; amounts and balances are integers in centavos.
 
 - **User:** `_id`, `name`, `email`, `contactNumber` (optional; omitted when not set, never sent as `""`), `role` (`customer` | `staff` | `admin`), `status`, `isVerified` (boolean), `notificationPreferences` (`{ email: true, sms: false }`), `createdAt`, `updatedAt`. Never expose `passwordHash`.
-- **BankAccount:** `_id`, `accountNumber`, `owner` (user `_id`), `balance`, `status` (`active` | `frozen` | `closed`), `createdAt`, `updatedAt`.
-- **Transaction:** `_id`, `referenceNumber`, `transactionType` (`cash_in` | `transfer`), `amount`, `sourceAccount` (account `_id`; empty for `cash_in`), `destinationAccount` (account `_id`), `performedBy` (user `_id`), `status`, `flagReason` (`null` unless flagged), `createdAt`, `updatedAt`.
+- **BankAccount:** `_id`, `accountNumber` (12 digits, no spaces; format only for display), `owner` (user `_id`), `balance`, `status` (`active` | `frozen` | `closed`), `createdAt`, `updatedAt`.
+- **Transaction:** `_id`, `referenceNumber`, `transactionType` (`cash_in` | `transfer`), `amount`, `sourceAccount` (account `_id`; empty for `cash_in`), `destinationAccount` (account `_id`), `performedBy` (user `_id`), `status`, `flagReason` (`null` unless flagged or held for review), `createdAt`, `updatedAt`.
 - **Notification:** `_id`, `recipient` (user `_id`), `type` (`transaction` | `account` | `security` | `system`), `message`, `relatedTransaction` (optional), `isRead` (boolean), `createdAt`.
 - **AuditLog:** `_id`, `actor` (user `_id`), `action`, `targetType` (`User` | `BankAccount` | `Transaction`), `targetId`, `createdAt`.
 
@@ -94,13 +97,16 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 
 **Accounts**
 
-- `GET /accounts/me`, `GET /accounts/me/balance`, `GET /accounts/:id`
+- `GET /accounts/me`
+- `GET /accounts/me/balance` → `{ accountNumber, balance, status }`
+- `GET /accounts/lookup/:accountNumber` (checks a transfer recipient; response fields still to be confirmed)
+- `GET /accounts/:id` (customers: own account only)
 
 **Transactions**
 
 - `POST /transactions/cash-in`
-- `POST /transactions/transfer`
-- `GET /transactions`
+- `POST /transactions/transfer` with `{ recipientAccountNumber, amount, holdForReview? }`
+- `GET /transactions` with `?status=&type=&page=&limit=` (also `search`, `days`/`period`; values to be confirmed) → `data: { transactions, pagination: { page, limit, total, totalPages }, counts: { all, completed, pending, failed, cancelled, flagged }, summary: { moneyInThisMonth, moneyOutThisMonth } }`
 - `GET /transactions/:id`
 - `PATCH /transactions/:id/cancel`
 

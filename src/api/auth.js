@@ -44,7 +44,7 @@ export const register = async ({ name, email, password, contactNumber }) => {
     const suffix = String(Date.now())
     accounts.push({
       _id: `a${id}`,
-      accountNumber: `1001-${suffix.slice(-8, -4)}-${suffix.slice(-4)}`,
+      accountNumber: `00${suffix.slice(-10)}`, // 12 digits, like the backend
       owner: id,
       balance: 0,
       status: 'active',
