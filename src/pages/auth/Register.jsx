@@ -19,7 +19,8 @@ function validate({ name, email, mobile, password, confirmPassword }) {
   if (!EMAIL_PATTERN.test(email.trim())) {
     errors.email = 'Enter a valid email address, like juan@email.com.'
   }
-  if (digits.length !== 10 || !digits.startsWith('9')) {
+  // Mobile number is optional, but if they type one it must be valid
+  if (digits && (digits.length !== 10 || !digits.startsWith('9'))) {
     errors.mobile = 'Enter your 10-digit mobile number, like 917 123 4567.'
   }
   if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
@@ -78,7 +79,8 @@ export default function Register() {
         email: form.email.trim(),
         password: form.password,
         // Saved like the mock data: 09171234567
-        contactNumber: `0${form.mobile.replace(/\D/g, '')}`,
+        // Optional: send '' if left blank
+        contactNumber: form.mobile.trim() ? `0${form.mobile.replace(/\D/g, '')}` : '',
       })
       navigate(`/${user.role}`, { replace: true })
     } catch (err) {
@@ -97,7 +99,7 @@ export default function Register() {
   return (
     <AuthLayout
       title="Start saving the smart way."
-      subtitle="Create your sinop account in a minute. All you need is your name, email, and mobile number."
+      subtitle="Create your sinop account in a minute. All you need is your name and email."
     >
       <form className="flex w-full max-w-[400px] flex-col gap-5" onSubmit={handleSubmit} noValidate>
         <Link
@@ -162,14 +164,13 @@ export default function Register() {
 
         <div className="flex flex-col gap-2">
           <label htmlFor="register-mobile" className={labelClass}>
-            Mobile number <RequiredMark />
+            Mobile number <span className="font-normal text-muted">(optional)</span>
           </label>
           <div className="flex gap-2">
             <span className="flex h-13 items-center rounded-2xl border-[1.5px] border-line bg-ground px-3.5 text-[15px] font-bold">
               +63
             </span>
             <input
-              aria-required="true"
               id="register-mobile"
               type="tel"
               inputMode="numeric"
