@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { flushSync } from "react-dom";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import AuthLayout from "../../components/auth/AuthLayout";
@@ -14,10 +15,22 @@ import {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Fields in the order they appear, so we can focus the first one with an error
+const FIELD_ORDER = ["name", "email", "mobile", "password", "confirmPassword"];
+
+// Accepts 917 123 4567, 09171234567, or +63 917 123 4567 and returns
+// the 10-digit local part (9171234567)
+function toLocalMobile(mobile) {
+  const digits = mobile.replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("63")) return digits.slice(2);
+  if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1);
+  return digits;
+}
+
 // Returns { fieldName: 'error message' } for anything invalid.
 function validate({ name, email, mobile, password, confirmPassword }) {
   const errors = {};
-  const digits = mobile.replace(/\D/g, "");
+  const localMobile = toLocalMobile(mobile);
 
   if (name.trim().length < 2) {
     errors.name = "Enter your full name.";
@@ -26,7 +39,7 @@ function validate({ name, email, mobile, password, confirmPassword }) {
     errors.email = "Enter a valid email address, like juan@email.com.";
   }
   // Mobile number is optional, but if they type one it must be valid
-  if (digits && (digits.length !== 10 || !digits.startsWith("9"))) {
+  if (localMobile && (localMobile.length !== 10 || !localMobile.startsWith("9"))) {
     errors.mobile = "Enter your 10-digit mobile number, like 917 123 4567.";
   }
   if (
@@ -36,7 +49,9 @@ function validate({ name, email, mobile, password, confirmPassword }) {
   ) {
     errors.password = "Use at least 8 characters with letters and numbers.";
   }
-  if (confirmPassword === "" || confirmPassword !== password) {
+  if (confirmPassword === "") {
+    errors.confirmPassword = "Re-enter your password.";
+  } else if (confirmPassword !== password) {
     errors.confirmPassword = "Passwords don’t match.";
   }
   return errors;
@@ -79,8 +94,14 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const found = validate(form);
-    setErrors(found);
-    if (Object.keys(found).length > 0) return;
+    // Render the errors right away so the field's error message is linked
+    // before we focus it (screen readers then read the message aloud)
+    flushSync(() => setErrors(found));
+    const firstInvalid = FIELD_ORDER.find((field) => found[field]);
+    if (firstInvalid) {
+      document.getElementById(`register-${firstInvalid}`)?.focus();
+      return;
+    }
 
     setError("");
     setLoading(true);
@@ -92,7 +113,7 @@ export default function Register() {
         // Saved like the mock data: 09171234567
         // Optional: send '' if left blank
         contactNumber: form.mobile.trim()
-          ? `0${form.mobile.replace(/\D/g, "")}`
+          ? `0${toLocalMobile(form.mobile)}`
           : "",
       });
       navigate(`/${user.role}`, { replace: true });
@@ -185,9 +206,13 @@ export default function Register() {
           <label htmlFor="register-mobile" className={labelClass}>
             Mobile number{" "}
             <span className="font-normal text-muted">(optional)</span>
+            <span className="sr-only">, Philippine number, +63</span>
           </label>
           <div className="flex gap-2">
-            <span className="flex h-13 items-center rounded-2xl border-[1.5px] border-line bg-ground px-3.5 text-[15px] font-bold">
+            <span
+              aria-hidden="true"
+              className="flex h-13 items-center rounded-2xl border-[1.5px] border-line bg-ground px-3.5 text-[15px] font-bold"
+            >
               +63
             </span>
             <input
@@ -195,6 +220,7 @@ export default function Register() {
               type="tel"
               inputMode="numeric"
               autoComplete="tel-national"
+              maxLength={16}
               placeholder="917 123 4567"
               value={form.mobile}
               onChange={update("mobile")}
