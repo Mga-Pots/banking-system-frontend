@@ -7,6 +7,7 @@ import AdminLayout from './layouts/AdminLayout'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import CustomerDashboard from './pages/customer/Dashboard'
+import ComingSoon from './pages/customer/ComingSoon'
 import StaffDashboard from './pages/staff/Dashboard'
 import AdminDashboard from './pages/admin/Dashboard'
 
@@ -27,6 +28,11 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={['customer']} />}>
             <Route path="/customer" element={<CustomerLayout />}>
               <Route index element={<CustomerDashboard />} />
+              <Route path="cash-in" element={<ComingSoon title="Cash in" />} />
+              <Route path="transfer" element={<ComingSoon title="Transfer" />} />
+              <Route path="history" element={<ComingSoon title="Transaction History" />} />
+              <Route path="settings" element={<ComingSoon title="Profile & settings" />} />
+              <Route path="notifications" element={<ComingSoon title="Notifications" />} />
               <Route path="*" element={<Navigate to="/customer" replace />} />
             </Route>
           </Route>

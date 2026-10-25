@@ -5,17 +5,41 @@
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-brand: "Sora", ui-sans-serif, system-ui, sans-serif;
 
-  --color-ink: #14532d;
-  --color-forest: #064e3b;
-  --color-wallet: #15803d;
-  --color-bright: #22c55e;
-  --color-mint-top: #a9e6c4;
-  --color-mint-mid: #d4f4e2;
-  --color-ground: #f2faf5;
+  /* brand greens: a deep pine-teal family (not Tailwind's stock green scale) */
+  --color-ink: #0b4a3b;
+  --color-forest: #063b30;
+  --color-wallet: #0f6f59;
+  --color-bright: #2bb38a;
+  --color-mint-top: #a4e0cb;
+  --color-mint-mid: #d3f0e4;
+  --color-ground: #eef7f3;
   --color-text: #0f172a;
   --color-muted: #5b6475;
   --color-label: #334155;
   --color-line: #d3e2d9;
-  --color-placeholder: #7a8494;
+  --color-placeholder: #6b7280;
   --color-error: #b91c1c;
+
+  /* customer dashboard */
+  --color-mint: #d8f2e6;
+  --color-card-deep: #04241c;
+  --color-canvas: #f3f6f5; /* cool near-white behind the white cards */
+  --color-field: #f5faf7;
+  --color-field-line: #739586; /* 3:1 against the field fill and the white cards */
+  --color-divider: #e2e9e6; /* hairline borders */
+
+  /* the one bright accent: fresh mint-emerald. Use it as a fill or on dark green, never as text on white */
+  --color-accent: #1fd88e;
+
+  /* status badges: background + text */
+  --color-status-completed: #d8f2e6;
+  --color-status-completed-text: #0d5a46;
+  --color-status-pending: #fbeccb;
+  --color-status-pending-text: #7a4a05;
+  --color-status-failed: #fee2e2;
+  --color-status-failed-text: #b91c1c;
+  --color-status-cancelled: #f1f5f9;
+  --color-status-cancelled-text: #475569;
+  --color-status-flagged: #ffedd5;
+  --color-status-flagged-text: #9a3412;
 }

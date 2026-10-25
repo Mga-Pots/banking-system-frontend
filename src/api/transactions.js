@@ -26,6 +26,20 @@ const newReferenceNumber = (date) => {
   return `TXN-${day}-${random}`
 }
 
+// Customer responses carry the accounts as { _id, accountNumber } (assumed backend
+// shape, to be confirmed), so the UI can show account numbers. The mock store keeps
+// plain ids; this converts on the way out.
+const accountRef = (id) => {
+  if (!id) return null
+  return { _id: id, accountNumber: accounts.find((a) => a._id === id)?.accountNumber }
+}
+
+const populate = (tx) => ({
+  ...tx,
+  sourceAccount: accountRef(tx.sourceAccount),
+  destinationAccount: accountRef(tx.destinationAccount),
+})
+
 const newTransaction = (fields) => {
   const now = new Date()
   return {
@@ -64,7 +78,7 @@ export const cashIn = async ({ amount }) => {
       destinationAccount: account._id,
     })
     transactions.unshift(tx)
-    return mockResponse({ ...tx })
+    return mockResponse(populate(tx))
   }
   return (await api.post('/transactions/cash-in', { amount })).data
 }
@@ -96,7 +110,7 @@ export const transfer = async ({ recipientAccountNumber, amount, holdForReview =
       ...(holdForReview && { status: 'pending', flagReason: HELD_REASON }),
     })
     transactions.unshift(tx)
-    return mockResponse({ ...tx })
+    return mockResponse(populate(tx))
   }
   const body = { recipientAccountNumber: normalizeAccountNumber(recipientAccountNumber), amount }
   if (holdForReview) body.holdForReview = true
@@ -136,7 +150,7 @@ export const getMyTransactions = async ({ status, type, page = 1, limit = DEFAUL
     const total = filtered.length
     const start = (page - 1) * limit
     return mockResponse({
-      transactions: filtered.slice(start, start + limit).map((t) => ({ ...t })),
+      transactions: filtered.slice(start, start + limit).map(populate),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
       counts,
       summary,
@@ -150,7 +164,7 @@ export const getTransactionById = async (id) => {
   if (USE_MOCK) {
     const tx = transactions.find((t) => t._id === id)
     if (!tx || !isVisibleTo(tx, getMyMockAccount())) return mockError('Transaction not found')
-    return mockResponse({ ...tx })
+    return mockResponse(populate(tx))
   }
   return (await api.get(`/transactions/${id}`)).data
 }
@@ -168,7 +182,7 @@ export const cancelTransaction = async (id) => {
     account.balance += tx.amount
     tx.status = 'cancelled'
     tx.updatedAt = new Date().toISOString()
-    return mockResponse({ ...tx })
+    return mockResponse(populate(tx))
   }
   return (await api.patch(`/transactions/${id}/cancel`)).data
 }

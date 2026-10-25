@@ -1,0 +1,90 @@
+import { useEffect, useState } from 'react'
+import Modal from '../ui/Modal'
+import Button from '../ui/Button'
+import Amount from '../ui/Amount'
+import { lookupAccount } from '../../api/accounts'
+import { transfer } from '../../api/transactions'
+import { formatAccountNumber } from '../../utils/formatAccountNumber'
+
+const messageOf = (err) => err.response?.data?.message ?? err.message
+
+// The review step before any money moves. It checks the recipient, shows who gets
+// what, and only sends when the customer confirms. The Transfer page will reuse it.
+// `onSent(transaction)` runs after a successful transfer.
+export default function TransferReviewModal({ recipientAccountNumber, amount, fromAccount, onClose, onSent }) {
+  const [lookup, setLookup] = useState({ status: 'loading', recipient: null, error: '' })
+  const [submit, setSubmit] = useState({ sending: false, error: '' })
+
+  useEffect(() => {
+    let active = true
+    lookupAccount(recipientAccountNumber)
+      .then((res) => active && setLookup({ status: 'ready', recipient: res.data, error: '' }))
+      .catch((err) => active && setLookup({ status: 'error', recipient: null, error: messageOf(err) }))
+    return () => {
+      active = false
+    }
+  }, [recipientAccountNumber])
+
+  const confirm = async () => {
+    setSubmit({ sending: true, error: '' })
+    try {
+      const res = await transfer({ recipientAccountNumber, amount })
+      onSent(res.data)
+    } catch (err) {
+      setSubmit({ sending: false, error: messageOf(err) })
+    }
+  }
+
+  const { recipient } = lookup
+
+  return (
+    <Modal title="Review transfer" onClose={onClose}>
+      <p className="text-sm text-muted">You are sending</p>
+      <p className="mb-4 text-[32px] leading-tight font-extrabold text-text">
+        <Amount centavos={amount} />
+      </p>
+
+      <dl>
+        <div className="flex items-start justify-between gap-4 border-t border-divider py-3">
+          <dt className="text-sm text-muted">From</dt>
+          <dd className="text-right text-sm font-bold text-text tabular-nums">
+            {formatAccountNumber(fromAccount.accountNumber)}
+          </dd>
+        </div>
+        <div className="flex items-start justify-between gap-4 border-t border-divider py-3">
+          <dt className="text-sm text-muted">To</dt>
+          <dd className="text-right text-sm font-bold text-text">
+            {lookup.status === 'loading' && <span className="font-normal text-muted">Checking account…</span>}
+            {recipient && <span className="block">{recipient.displayName}</span>}
+            <span className="block tabular-nums">{formatAccountNumber(recipientAccountNumber)}</span>
+          </dd>
+        </div>
+      </dl>
+
+      {lookup.status === 'error' && (
+        <p role="alert" className="mt-3 text-sm font-semibold text-error">
+          {lookup.error}
+        </p>
+      )}
+      {submit.error && (
+        <p role="alert" className="mt-3 text-sm font-semibold text-error">
+          {submit.error}
+        </p>
+      )}
+
+      <div className="mt-6 flex gap-3">
+        <Button variant="secondary" size="lg" className="flex-1" onClick={onClose}>
+          {lookup.status === 'error' ? 'Go back' : 'Cancel'}
+        </Button>
+        <Button
+          size="lg"
+          className="flex-1"
+          disabled={lookup.status !== 'ready' || submit.sending}
+          onClick={confirm}
+        >
+          {submit.sending ? 'Sending…' : 'Confirm transfer'}
+        </Button>
+      </div>
+    </Modal>
+  )
+}

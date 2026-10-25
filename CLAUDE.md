@@ -12,7 +12,7 @@ The backend is a separate repo (Node.js + Express + MongoDB). This repo is the R
 
 ## Project status
 
-- **The UI design is NOT final.** Keep pages and layouts minimal and unstyled: headings, placeholder text, and basic working forms. Do not add custom colors, cards, or polished layouts until the team finalizes the design.
+- **The customer UI design is approved.** The team signed off on the customer dashboard mockup (sidebar nav, balance card, account card, monthly money in/out, recent transactions, quick transfer). Build customer pages to match it, using the design tokens in `src/index.css` (add new colors there as tokens, not raw hex in components) and the shared components in `src/components/ui/`. Staff and admin pages stay minimal and unstyled until their designs are approved.
 - **The backend is not ready yet.** All API calls go through the mock layer (see below).
 
 ## Folder structure
@@ -21,8 +21,10 @@ The backend is a separate repo (Node.js + Express + MongoDB). This repo is the R
 src/
   api/          axios instance + one file per resource (auth, accounts, transactions, notifications, users, admin)
   mocks/        mock data used when VITE_USE_MOCK=true
-  context/      AuthContext (user, token, role, login, logout)
+  context/      AuthContext (user, token, role, login, logout), PrivacyContext (hide balance and account details)
   components/   shared components (Navbar, ProtectedRoute, etc.)
+    ui/         reusable pieces: Button, Card, Input, Modal, Toast, StatusBadge, Amount, Sensitive, Skeleton, icons
+    customer/   customer dashboard pieces (Sidebar, Header, AccountCard, TransactionRow, QuickTransfer, ...)
   layouts/      CustomerLayout, StaffLayout, AdminLayout
   pages/
     auth/       Login, Register
@@ -36,6 +38,9 @@ src/
 
 - **Pages never call axios directly.** They call functions in `src/api/`. Only the api files know whether data is mocked or real.
 - **Mock switch:** every api function checks `import.meta.env.VITE_USE_MOCK`. If it's `"true"`, return mock data after a short delay; otherwise call the real endpoint. Mock responses must have exactly the same shape as real ones.
+- **Mock scenarios:** with `VITE_USE_MOCK=true`, open any page with `?scenario=frozen` (frozen account) or `?scenario=new` (brand-new customer) to see those states. `?scenario=default` turns it off.
+- **Voice:** English is the main language. Light Taglish touches go only in warm moments (greeting, success messages, empty states, a few labels like "Net ngayong buwan"), with `lang="fil"` on the Filipino words. Errors, frozen or held states, and anything about money rules stay in plain English. Have a Filipino speaker check new strings.
+- **Private values:** wrap balances, account numbers and totals in `<Sensitive>` so the dashboard's "hide details" eye button covers them all.
 - **Response shape** (from the backend, and from mocks):
   - success: `{ success: true, data: ... }`
   - error: `{ success: false, message: "..." }`
@@ -78,7 +83,7 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 
 - **User:** `_id`, `name`, `email`, `contactNumber` (optional; omitted when not set, never sent as `""`), `role` (`customer` | `staff` | `admin`), `status`, `isVerified` (boolean), `notificationPreferences` (`{ email: true, sms: false }`), `createdAt`, `updatedAt`. Never expose `passwordHash`.
 - **BankAccount:** `_id`, `accountNumber` (12 digits, no spaces; format only for display), `owner` (user `_id`), `balance`, `status` (`active` | `frozen` | `closed`), `createdAt`, `updatedAt`.
-- **Transaction:** `_id`, `referenceNumber`, `transactionType` (`cash_in` | `transfer`), `amount`, `sourceAccount` (account `_id`; empty for `cash_in`), `destinationAccount` (account `_id`), `performedBy` (user `_id`), `status`, `flagReason` (`null` unless flagged or held for review), `createdAt`, `updatedAt`.
+- **Transaction:** `_id`, `referenceNumber`, `transactionType` (`cash_in` | `transfer`), `amount`, `sourceAccount` (empty for `cash_in`), `destinationAccount` (customer responses carry each account as `{ _id, accountNumber }`; this is an **assumption to confirm with the backend**, handled only in `src/utils/transactions.js`), `performedBy` (user `_id`), `status`, `flagReason` (`null` unless flagged or held for review), `createdAt`, `updatedAt`.
 - **Notification:** `_id`, `recipient` (user `_id`), `type` (`transaction` | `account` | `security` | `system`), `message`, `relatedTransaction` (optional), `isRead` (boolean), `createdAt`.
 - **AuditLog:** `_id`, `actor` (user `_id`), `action`, `targetType` (`User` | `BankAccount` | `Transaction`), `targetId`, `createdAt`.
 
@@ -99,7 +104,7 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 
 - `GET /accounts/me`
 - `GET /accounts/me/balance` → `{ accountNumber, balance, status }`
-- `GET /accounts/lookup/:accountNumber` (checks a transfer recipient; response fields still to be confirmed)
+- `GET /accounts/lookup/:accountNumber` (checks a transfer recipient; assumed response `{ accountNumber, displayName, initials }`, to be confirmed)
 - `GET /accounts/:id` (customers: own account only)
 
 **Transactions**

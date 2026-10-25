@@ -1,3 +1,5 @@
+import { scenario } from './scenario'
+
 // recipient is the user's _id.
 // type: "transaction" | "account" | "security" | "system"
 // relatedTransaction is the transaction _id, when there is one.
@@ -30,3 +32,6 @@ export const notifications = [
     createdAt: '2026-10-12T11:00:00.000Z',
   },
 ]
+
+// A new customer has no notifications yet.
+if (scenario === 'new') notifications.splice(0, notifications.length)
