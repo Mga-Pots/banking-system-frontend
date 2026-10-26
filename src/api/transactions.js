@@ -2,6 +2,7 @@ import api from './axios'
 import { USE_MOCK, mockResponse, mockError, getMockUser } from './helpers'
 import { accounts } from '../mocks/accounts'
 import { transactions } from '../mocks/transactions'
+import { pesosToCentavos } from '../utils/parseAmount'
 import { needsApproval } from '../utils/transferRules'
 
 // Amounts are integers in centavos.
@@ -119,18 +120,74 @@ export const transfer = async ({ recipientAccountNumber, amount, holdForReview =
   return (await api.post('/transactions/transfer', body)).data
 }
 
-// Customer history. Filters: status, type ("cash_in" | "transfer"), page, limit.
-// The backend also supports search and days/period; add them to the mock once
-// their exact values are confirmed.
-// Returns { transactions, pagination, counts, summary }.
-export const getMyTransactions = async ({ status, type, page = 1, limit = DEFAULT_LIMIT } = {}) => {
+// Does a typed search term match this mock transaction? It looks at the reference
+// number, either account number, and the amount ("500", "1,250.50" or "₱500").
+const matchesSearch = (tx, term) => {
+  const needle = term.trim().toLowerCase()
+  if (!needle) return true
+  const digits = needle.replace(/[\s-]/g, '')
+  const accountNumbers = [tx.sourceAccount, tx.destinationAccount].map((id) => accountRef(id)?.accountNumber ?? '')
+  return (
+    tx.referenceNumber.toLowerCase().includes(needle) ||
+    (digits !== '' && accountNumbers.some((number) => number.includes(digits))) ||
+    pesosToCentavos(needle) === tx.amount
+  )
+}
+
+// The time window a date filter means, as { start, end } (start included, end not;
+// either can be missing). Presets: "7d", "30d", "month", "3m". "custom" uses `from`
+// and `to` as "YYYY-MM-DD" days, both included.
+const dateRange = ({ period, from, to }) => {
+  const now = new Date()
+  const day = (y, m, d) => new Date(y, m, d)
+  const today = day(now.getFullYear(), now.getMonth(), now.getDate())
+  const daysBack = (n) => day(today.getFullYear(), today.getMonth(), today.getDate() - n)
+  const parse = (iso) => (/^\d{4}-\d{2}-\d{2}$/.test(iso ?? '') ? new Date(`${iso}T00:00:00`) : null)
+
+  if (period === '7d') return { start: daysBack(6) }
+  if (period === '30d') return { start: daysBack(29) }
+  if (period === 'month') return { start: day(now.getFullYear(), now.getMonth(), 1) }
+  if (period === '3m') return { start: day(now.getFullYear(), now.getMonth() - 2, 1) }
+  if (period === 'custom') {
+    const end = parse(to)
+    return { start: parse(from) ?? undefined, end: end ? day(end.getFullYear(), end.getMonth(), end.getDate() + 1) : undefined }
+  }
+  return {}
+}
+
+// Customer history. Filters: status, type ("cash_in" | "transfer"), search, a date
+// period, page, limit.
+// search is sent as a `search` query param; the name and what it matches (reference,
+// account number, amount) are assumed, to be confirmed with the backend.
+// The date filter is sent as `period` ("7d" | "30d" | "month" | "3m" | "custom") plus
+// `from` and `to` ("YYYY-MM-DD") for a custom range. Those names and values are
+// assumed, to be confirmed with the backend (it supports `days`/`period`).
+// Returns { transactions, pagination, counts, summary }. `counts` follow every filter
+// except status (so tabs can show their totals); `summary` is always this month's.
+export const getMyTransactions = async ({
+  status,
+  type,
+  search,
+  period,
+  from,
+  to,
+  page = 1,
+  limit = DEFAULT_LIMIT,
+} = {}) => {
   if (USE_MOCK) {
     const account = getMyMockAccount()
     const mine = transactions.filter((t) => isVisibleTo(t, account))
 
-    // counts cover all of the customer's transactions, so filter tabs can show totals
-    const counts = { all: mine.length, completed: 0, pending: 0, failed: 0, cancelled: 0, flagged: 0 }
-    mine.forEach((t) => {
+    // The rows that match every filter except status, so the status counts show what
+    // each filter tab would give with the other filters applied.
+    const { start: since, end: until } = dateRange({ period, from, to })
+    const matching = mine
+      .filter((t) => !type || t.transactionType === type)
+      .filter((t) => !search || matchesSearch(t, search))
+      .filter((t) => (!since || new Date(t.createdAt) >= since) && (!until || new Date(t.createdAt) < until))
+
+    const counts = { all: matching.length, completed: 0, pending: 0, failed: 0, cancelled: 0, flagged: 0 }
+    matching.forEach((t) => {
       counts[t.status] += 1
     })
 
@@ -146,8 +203,8 @@ export const getMyTransactions = async ({ status, type, page = 1, limit = DEFAUL
         else summary.moneyOutThisMonth += t.amount
       })
 
-    const filtered = mine
-      .filter((t) => (!status || t.status === status) && (!type || t.transactionType === type))
+    const filtered = matching
+      .filter((t) => !status || t.status === status)
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     const total = filtered.length
     const start = (page - 1) * limit
@@ -158,7 +215,16 @@ export const getMyTransactions = async ({ status, type, page = 1, limit = DEFAUL
       summary,
     })
   }
-  const params = { page, limit, ...(status && { status }), ...(type && { type }) }
+  const params = {
+    page,
+    limit,
+    ...(status && { status }),
+    ...(type && { type }),
+    ...(search && { search }),
+    ...(period && { period }),
+    ...(period === 'custom' && from && { from }),
+    ...(period === 'custom' && to && { to }),
+  }
   return (await api.get('/transactions', { params })).data
 }
 

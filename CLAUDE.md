@@ -113,7 +113,7 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 
 - `POST /transactions/cash-in`
 - `POST /transactions/transfer` with `{ recipientAccountNumber, amount, holdForReview? }`
-- `GET /transactions` with `?status=&type=&page=&limit=` (also `search`, `days`/`period`; values to be confirmed) → `data: { transactions, pagination: { page, limit, total, totalPages }, counts: { all, completed, pending, failed, cancelled, flagged }, summary: { moneyInThisMonth, moneyOutThisMonth } }`
+- `GET /transactions` with `?status=&type=&search=&page=&limit=` (`search` is **assumed, to be confirmed**: a single text term matched against the reference number, either account number, and the amount in pesos, e.g. `500` or `1,250.50`; the date filter is sent as `period` (`7d`, `30d`, `month`, `3m` or `custom`) plus `from` and `to` as `YYYY-MM-DD` days, both included, for `custom`; also **assumed, to be confirmed**) → `data: { transactions, pagination: { page, limit, total, totalPages }, counts: { all, completed, pending, failed, cancelled, flagged }, summary: { moneyInThisMonth, moneyOutThisMonth } }`. `counts` is **assumed, to be confirmed**: counted with `type`, `search` and the date filter applied but `status` ignored, so each status tab shows how many rows it would give. `summary` is always this month's, whatever the filters.
 - `GET /transactions/:id`
 - `PATCH /transactions/:id/cancel`
 
