@@ -8,6 +8,8 @@ const variants = {
   primary: 'bg-ink text-white hover:bg-forest focus-visible:outline-wallet',
   secondary: 'border-[1.5px] border-field-line bg-white text-ink hover:bg-field focus-visible:outline-wallet',
   white: 'bg-white text-ink hover:bg-field focus-visible:outline-wallet',
+  // for actions that can't be undone, like cancelling a transaction
+  danger: 'bg-error text-white hover:brightness-110 focus-visible:outline-error',
   // for dark green surfaces
   accent: 'bg-accent text-forest hover:brightness-95 focus-visible:outline-accent',
   ghost: 'border border-white/25 bg-white/10 text-white hover:bg-white/15 focus-visible:outline-accent',

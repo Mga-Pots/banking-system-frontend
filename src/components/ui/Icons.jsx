@@ -119,3 +119,43 @@ export const CloseIcon = (props) => (
     <path d="M18 6 6 18M6 6l12 12" />
   </Icon>
 )
+export const UsersIcon = (props) => (
+  <Icon {...props}>
+    <circle cx="9" cy="8" r="4" />
+    <path d="M2 21a7 7 0 0 1 14 0M16 4.5a4 4 0 0 1 0 7M19 21a7 7 0 0 0-3-5.7" />
+  </Icon>
+)
+export const UserPlusIcon = (props) => (
+  <Icon {...props}>
+    <circle cx="9" cy="8" r="4" />
+    <path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6" />
+  </Icon>
+)
+export const CardIcon = (props) => (
+  <Icon {...props}>
+    <rect x="2.5" y="5" width="19" height="14" rx="2.5" />
+    <path d="M2.5 10h19M6.5 15h4" />
+  </Icon>
+)
+export const ClipboardIcon = (props) => (
+  <Icon {...props}>
+    <rect x="5" y="4" width="14" height="17" rx="2" />
+    <path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3" />
+  </Icon>
+)
+export const FlagIcon = (props) => (
+  <Icon {...props}>
+    <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
+  </Icon>
+)
+export const ShieldIcon = (props) => (
+  <Icon {...props}>
+    <path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z" />
+    <path d="m9 12 2 2 4-4" />
+  </Icon>
+)
+export const SnowIcon = (props) => (
+  <Icon {...props}>
+    <path d="M12 2v20M4.9 7l14.2 10M19.1 7 4.9 17" />
+  </Icon>
+)

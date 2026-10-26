@@ -1,5 +1,5 @@
 import api from './axios'
-import { USE_MOCK, mockResponse, mockError, withoutToken } from './helpers'
+import { USE_MOCK, mockResponse, mockError, withoutToken, getMockUser } from './helpers'
 import { users } from '../mocks/users'
 import { accounts } from '../mocks/accounts'
 import { transactions } from '../mocks/transactions'
@@ -11,12 +11,27 @@ const ACCOUNT_STATUSES = ['active', 'frozen', 'closed']
 const TRANSACTION_STATUSES = ['pending', 'completed', 'failed', 'cancelled', 'flagged']
 const ROLES = ['customer', 'staff', 'admin']
 
-// Looks up `id` in `list`, checks `value` is allowed, sets `field`, and returns the updated copy.
-const setMockField = (list, id, field, value, allowed, label) => {
+// Mock version of the backend's audit trail: every admin/staff change adds an entry.
+const TARGET_TYPES = { User: 'User', Account: 'BankAccount', Transaction: 'Transaction' }
+const logMock = (action, targetType, targetId) =>
+  auditLogs.push({
+    _id: `l${Date.now()}`,
+    actor: getMockUser()?._id ?? null,
+    action,
+    targetType,
+    targetId,
+    createdAt: new Date().toISOString(),
+  })
+
+// Looks up `id` in `list`, checks `value` is allowed, sets `field`, logs it (`action`),
+// and returns the updated copy.
+const setMockField = (list, id, field, value, allowed, label, action) => {
   const item = list.find((x) => x._id === id)
   if (!item) return mockError(`${label} not found`)
   if (!allowed.includes(value)) return mockError(`Invalid ${field}`)
   item[field] = value
+  item.updatedAt = new Date().toISOString()
+  if (action) logMock(action, TARGET_TYPES[label], id)
   return mockResponse(item.token === undefined ? { ...item } : withoutToken(item))
 }
 
@@ -41,6 +56,7 @@ export const createStaff = async ({ name, email, password }) => {
       token: `mock-token-${id}`,
     }
     users.push(staff)
+    logMock('staff.create', 'User', id)
     return mockResponse(withoutToken(staff))
   }
   return (await api.post('/admin/staff', { name, email, password })).data
@@ -63,19 +79,19 @@ export const getUserById = async (id) => {
 
 // admin
 export const updateUserStatus = async (id, status) => {
-  if (USE_MOCK) return setMockField(users, id, 'status', status, USER_STATUSES, 'User')
+  if (USE_MOCK) return setMockField(users, id, 'status', status, USER_STATUSES, 'User', 'user.status_update')
   return (await api.patch(`/admin/users/${id}/status`, { status })).data
 }
 
 // admin
 export const updateUserRole = async (id, role) => {
-  if (USE_MOCK) return setMockField(users, id, 'role', role, ROLES, 'User')
+  if (USE_MOCK) return setMockField(users, id, 'role', role, ROLES, 'User', 'user.role_update')
   return (await api.patch(`/admin/users/${id}/role`, { role })).data
 }
 
 // admin, staff
 export const verifyUser = async (id) => {
-  if (USE_MOCK) return setMockField(users, id, 'isVerified', true, [true], 'User')
+  if (USE_MOCK) return setMockField(users, id, 'isVerified', true, [true], 'User', 'user.verify')
   return (await api.patch(`/admin/users/${id}/verify`)).data
 }
 
@@ -87,7 +103,7 @@ export const getAccounts = async () => {
 
 // admin, staff (freeze / reactivate)
 export const updateAccountStatus = async (id, status) => {
-  if (USE_MOCK) return setMockField(accounts, id, 'status', status, ACCOUNT_STATUSES, 'Account')
+  if (USE_MOCK) return setMockField(accounts, id, 'status', status, ACCOUNT_STATUSES, 'Account', 'account.status_update')
   return (await api.patch(`/admin/accounts/${id}/status`, { status })).data
 }
 
@@ -100,7 +116,7 @@ export const getAllTransactions = async () => {
 // admin, staff (flag or cancel)
 export const updateTransactionStatus = async (id, status) => {
   if (USE_MOCK) {
-    return setMockField(transactions, id, 'status', status, TRANSACTION_STATUSES, 'Transaction')
+    return setMockField(transactions, id, 'status', status, TRANSACTION_STATUSES, 'Transaction', 'transaction.status_update')
   }
   return (await api.patch(`/admin/transactions/${id}/status`, { status })).data
 }
