@@ -2,6 +2,7 @@ import api from './axios'
 import { USE_MOCK, mockResponse, mockError, getMockUser } from './helpers'
 import { accounts } from '../mocks/accounts'
 import { transactions } from '../mocks/transactions'
+import { needsApproval } from '../utils/transferRules'
 
 // Amounts are integers in centavos.
 const isValidAmount = (amount) => Number.isInteger(amount) && amount > 0
@@ -84,10 +85,10 @@ export const cashIn = async ({ amount }) => {
 }
 
 // Sends funds to another account by its 12-digit account number.
-// holdForReview: true keeps it pending: the sender is charged now, and the
-// recipient is credited only when staff approve it.
-// TODO: the backend also holds transfers at or above a set amount. Add that here
-// once the backend confirms the limit and its units (pesos or centavos).
+// Transfers under APPROVAL_THRESHOLD complete right away. At or above it (or with
+// holdForReview: true) the transfer stays pending: the sender is charged now, and the
+// recipient is credited only when the bank approves it. The real backend decides this
+// itself; the mock mirrors it.
 export const transfer = async ({ recipientAccountNumber, amount, holdForReview = false }) => {
   if (USE_MOCK) {
     if (!isValidAmount(amount)) return mockError('Amount must be a positive whole number of centavos')
@@ -100,14 +101,15 @@ export const transfer = async ({ recipientAccountNumber, amount, holdForReview =
       return mockError('Both accounts must be active')
     }
     if (from.balance < amount) return mockError('Insufficient balance')
+    const held = holdForReview || needsApproval(amount)
     from.balance -= amount
-    if (!holdForReview) to.balance += amount
+    if (!held) to.balance += amount
     const tx = newTransaction({
       transactionType: 'transfer',
       amount,
       sourceAccount: from._id,
       destinationAccount: to._id,
-      ...(holdForReview && { status: 'pending', flagReason: HELD_REASON }),
+      ...(held && { status: 'pending', flagReason: HELD_REASON }),
     })
     transactions.unshift(tx)
     return mockResponse(populate(tx))

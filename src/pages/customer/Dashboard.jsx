@@ -91,7 +91,7 @@ export default function CustomerDashboard() {
     setTransferKey((key) => key + 1)
     showToast(
       tx.status === 'pending'
-        ? 'Naipadala na. Held for staff review ang transfer.'
+        ? 'Transfer submitted. It is waiting for bank approval.'
         : `Naipadala na. Ref ${tx.referenceNumber}`,
     )
     load()
@@ -176,7 +176,7 @@ export default function CustomerDashboard() {
                 )}
                 {onHold > 0 && (
                   <p className="mt-3 inline-block rounded-full bg-status-pending px-3 py-1 text-xs font-bold text-status-pending-text">
-                    {onHold} {onHold === 1 ? 'transfer' : 'transfers'} on hold for review
+                    {onHold} {onHold === 1 ? 'transfer' : 'transfers'} waiting for bank approval
                   </p>
                 )}
               </div>

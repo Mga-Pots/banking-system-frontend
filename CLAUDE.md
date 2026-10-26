@@ -70,7 +70,7 @@ src/
 - **Transactions have only two types: `cash_in` and `transfer`.** There is **no cash-out or withdrawal** feature. Do not create functions, mock data, or UI for it.
   - `cash_in`: adds simulated funds to the customer's own account (no real money).
   - `transfer`: sends funds to another account by account number. Must check: amount > 0, sufficient balance, both accounts active, not the same account.
-  - Transfers complete immediately unless held for review (`holdForReview: true`, or at/above a backend limit that is still being confirmed). A held transfer is `pending` with `flagReason: "Held for staff review"`: the sender is already charged, the recipient isn't credited yet.
+  - There is no transfer limit. Transfers **under ₱50,000** complete immediately, with no approval. Transfers of **₱50,000 or more** need bank approval before they go through (the threshold lives in `src/utils/transferRules.js`; whether exactly ₱50,000 needs approval is an **assumption to confirm with the backend**). The same holds for `holdForReview: true`. A held transfer is `pending` with `flagReason: "Held for staff review"`: the sender is already charged, the recipient isn't credited yet.
   - Only the sender can cancel, and only a `pending` transfer; the amount is refunded to the sender.
   - Customers don't see incoming transfers until they're `completed`.
 - **Transaction statuses:** `pending`, `completed`, `failed`, `cancelled`, `flagged`.

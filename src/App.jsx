@@ -8,6 +8,7 @@ import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import CustomerDashboard from './pages/customer/Dashboard'
 import CashIn from './pages/customer/CashIn'
+import Transfer from './pages/customer/Transfer'
 import ComingSoon from './pages/customer/ComingSoon'
 import StaffDashboard from './pages/staff/Dashboard'
 import AdminDashboard from './pages/admin/Dashboard'
@@ -30,7 +31,7 @@ export default function App() {
             <Route path="/customer" element={<CustomerLayout />}>
               <Route index element={<CustomerDashboard />} />
               <Route path="cash-in" element={<CashIn />} />
-              <Route path="transfer" element={<ComingSoon />} />
+              <Route path="transfer" element={<Transfer />} />
               <Route path="history" element={<ComingSoon />} />
               <Route path="settings" element={<ComingSoon />} />
               <Route path="notifications" element={<ComingSoon />} />
