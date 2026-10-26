@@ -91,6 +91,18 @@ export const ArrowUpRightIcon = (props) => (
     <path d="M7 17 17 7M7 7h10v10" />
   </Icon>
 )
+export const UserIcon = (props) => (
+  <Icon {...props}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21a8 8 0 0 1 16 0" />
+  </Icon>
+)
+export const LogOutIcon = (props) => (
+  <Icon {...props}>
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <path d="m16 17 5-5-5-5M21 12H9" />
+  </Icon>
+)
 export const LockIcon = (props) => (
   <Icon {...props}>
     <rect x="4" y="11" width="16" height="10" rx="2" />

@@ -279,7 +279,7 @@ Small pills (12px, bold, 4px by 12px padding) in the status color pairs. Account
 
 ### Navigation
 - **Sidebar:** 232px, white, a hairline on its right edge. The logo and wordmark sit on top with a quiet lowercase tagline, *masinop sa pera*, beneath. Items are 48px high with an icon and 14px semibold text; the active item is a Mint Wash fill with Deep Pine text. The verify card sits at the bottom until staff verify the customer.
-- **Header:** the greeting (a small Filipino salutation above the first name) on the left; on the right three 44px circular buttons with a hairline border: notifications with an unread badge, an avatar with initials, and settings. The avatar opens a small popover.
+- **Header:** the greeting (a small Filipino salutation above the first name) on the left; on the right two 44px circular buttons with a hairline border: notifications with an unread badge, and the avatar with initials, which carries a small round down-arrow badge on its bottom-right corner. The avatar is the single way into profile and settings. Its popover (288px wide) holds an identity block (initials, name, email), one "Profile & settings" entry with a one-line description, a hairline, and "Log out" last, each with a line icon.
 - **Mobile:** a top bar with a menu button and the logo; the sidebar opens as a left drawer.
 
 ### Dialogs
@@ -300,6 +300,7 @@ A full-width button: a hairline-ringed direction icon, a semibold title ("To Ped
 - **Do** use Pine Green outlines on light surfaces and Fresh Mint outlines on dark green.
 - **Do** give every control a 44px target; enlarge the hit area instead of the visible control when needed.
 - **Do** separate resting surfaces with a 1px Hairline, and keep Field Edge for form fields.
+- **Do** give each destination one primary entry point in the header; a contextual prompt (like the verify card) may link to it too, but don't add a second icon button for the same page.
 - **Do** keep Filipino words in warm moments only (greeting, success, empty state, a few labels), marked with `lang="fil"`.
 
 ### Don't:
