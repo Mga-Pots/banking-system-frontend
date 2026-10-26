@@ -92,7 +92,7 @@ export default function TransferReviewModal({ recipientAccountNumber, amount, fr
           disabled={lookup.status !== 'ready' || submit.sending}
           onClick={confirm}
         >
-          {submit.sending ? 'Sending…' : approval ? 'Submit for approval' : 'Confirm transfer'}
+          {submit.sending ? 'Sending…' : approval ? 'Proceed' : 'Confirm transfer'}
         </Button>
       </div>
     </Modal>

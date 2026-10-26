@@ -9,7 +9,7 @@ import { formatAccountNumber } from '../../utils/formatAccountNumber'
 import { pesosToCentavos, sanitizeAmountInput } from '../../utils/parseAmount'
 import { APPROVAL_THRESHOLD_TEXT } from '../../utils/transferRules'
 
-// Fill in a recipient and an amount, then press "Review transfer". It opens the
+// Fill in a recipient and an amount, then press "Transfer". It opens the
 // review step; nothing is sent from here. The first recent recipient starts filled in.
 export default function QuickTransfer({ recipients, available, frozen, onReview }) {
   const [accountNumber, setAccountNumber] = useState(() =>
@@ -28,7 +28,7 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
     const found = {}
     if (digits.length !== 12) found.accountNumber = 'Enter the 12-digit account number.'
     if (centavos === null || centavos <= 0) found.amount = 'Enter an amount greater than ₱0.00.'
-    else if (centavos > available) found.amount = 'That is more than your available balance.'
+    else if (centavos > available) found.amount = 'Your balance is insufficient.'
     setErrors(found)
 
     if (found.accountNumber) return accountRef.current?.focus()
@@ -102,7 +102,7 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
           bank approval first.
         </p>
         <Button type="submit" size="lg" disabled={frozen} className="w-full">
-          Review transfer
+          Transfer
         </Button>
       </form>
     </Card>

@@ -27,7 +27,7 @@ const readAmount = (text, available) => {
   const centavos = pesosToCentavos(text.replace(/\.$/, ''))
   if (centavos === null) return { centavos: null, problem: 'Enter a valid amount, like 1,000 or 250.50.' }
   if (centavos <= 0) return { centavos: null, problem: 'Enter an amount greater than ₱0.00.' }
-  if (centavos > available) return { centavos: null, problem: 'That is more than your available balance.' }
+  if (centavos > available) return { centavos: null, problem: 'Your balance is insufficient.' }
   return { centavos, problem: '' }
 }
 
@@ -275,9 +275,10 @@ export default function Transfer() {
                       loading ? (
                         <Skeleton className="h-4 w-32" />
                       ) : (
-                        <>
-                          Available: <Amount centavos={account.balance} sensitive mask="₱ ••••••" />
-                        </>
+                        <span className="text-sm">
+                          Current balance:{' '}
+                          <Amount centavos={account.balance} sensitive className="font-bold text-ink" />
+                        </span>
                       )
                     }
                   />
@@ -305,7 +306,7 @@ export default function Transfer() {
                 </div>
 
                 <Button type="submit" size="lg" className="mt-5 w-full" disabled={blocked || loading}>
-                  Review transfer
+                  Transfer
                 </Button>
               </fieldset>
             </form>
