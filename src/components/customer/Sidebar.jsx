@@ -1,8 +1,6 @@
 import { Link, NavLink } from 'react-router-dom'
 import Logo from '../auth/Logo'
 import { ArrowRightIcon, GridIcon, ListIcon, PlusIcon } from '../ui/Icons'
-import VerifyCard from './VerifyCard'
-import { useAuth } from '../../context/AuthContext'
 
 const links = [
   { to: '/customer', label: 'Overview', icon: GridIcon, end: true },
@@ -11,11 +9,9 @@ const links = [
   { to: '/customer/history', label: 'Transaction History', icon: ListIcon },
 ]
 
-// Logo, main navigation, and the "Get verified" card. `onNavigate` runs after a
-// link is pressed (the mobile menu uses it to close itself).
+// Logo and main navigation. `onNavigate` runs after a link is pressed (the mobile
+// menu uses it to close itself).
 export default function Sidebar({ onNavigate }) {
-  const { user } = useAuth()
-
   return (
     <div className="flex min-h-dvh flex-col gap-8 p-4">
       <div>
@@ -53,8 +49,6 @@ export default function Sidebar({ onNavigate }) {
           ))}
         </ul>
       </nav>
-
-      {!user?.isVerified && <VerifyCard onNavigate={onNavigate} />}
     </div>
   )
 }
