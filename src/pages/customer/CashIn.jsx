@@ -145,17 +145,6 @@ export default function CashIn() {
               <fieldset disabled={blocked || submitting} className="min-w-0 border-0 p-0">
                 <legend className="sr-only">Cash in details</legend>
 
-                <div className="mb-5 flex items-end justify-between gap-4 border-b border-divider pb-5">
-                  <p className="text-sm text-muted">Current balance</p>
-                  {loading ? (
-                    <Skeleton className="h-7 w-32" />
-                  ) : (
-                    <p className="font-brand text-xl font-semibold text-text">
-                      <Amount centavos={account.balance} sensitive />
-                    </p>
-                  )}
-                </div>
-
                 <Input
                   ref={inputRef}
                   id="cash-in-amount"
@@ -171,6 +160,17 @@ export default function CashIn() {
                   error={!typing && problem ? problem : undefined}
                 />
 
+                <div className="mt-2 text-sm text-muted">
+                  {loading ? (
+                    <Skeleton className="h-5 w-48" />
+                  ) : (
+                    <p>
+                      Current balance{' '}
+                      <Amount centavos={account.balance} sensitive className="font-bold text-text" />
+                    </p>
+                  )}
+                </div>
+
                 <div className="mt-4">
                   <AmountPresets
                     presets={PRESETS}
@@ -180,14 +180,13 @@ export default function CashIn() {
                   />
                 </div>
 
-                <p aria-live="polite" className="mt-5 text-sm text-muted">
-                  {centavos !== null && account ? (
+                {/* Empty until an amount is entered; the space is kept so the button doesn't jump */}
+                <p aria-live="polite" className="mt-4 min-h-5 text-sm text-muted">
+                  {centavos !== null && account && (
                     <>
                       Your balance will be{' '}
                       <Amount centavos={account.balance + centavos} sensitive className="font-bold text-text" />
                     </>
-                  ) : (
-                    'Your new balance will show here.'
                   )}
                 </p>
 
