@@ -22,7 +22,7 @@ export default function AccountDetailsModal({ account, holder, onClose }) {
   return (
     <Modal title="Account details" onClose={onClose}>
       <div className="overflow-hidden rounded-2xl bg-linear-to-br from-card-deep via-ink to-wallet text-white shadow-lg">
-        <div aria-hidden="true" className="mt-5 h-10 bg-black/70" />
+        <div aria-hidden="true" className="mt-5 h-10 bg-card-deep/60" />
         <dl className="flex items-end justify-between gap-4 p-5">
           <div>
             <dt className="text-xs font-semibold tracking-wider uppercase">Valid thru</dt>

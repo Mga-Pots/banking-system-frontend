@@ -39,7 +39,7 @@ export default function Modal({ title, hideTitle = false, placement = 'center', 
       className={`overflow-y-auto bg-white p-0 text-text shadow-2xl backdrop:bg-black/40 ${placements[placement]}`}
     >
       <div className={`flex items-center gap-4 ${hideTitle ? 'justify-end' : 'justify-between'} px-6 pt-6`}>
-        <h2 id={titleId} className={hideTitle ? 'sr-only' : 'text-xl font-extrabold'}>
+        <h2 id={titleId} className={hideTitle ? 'sr-only' : 'text-xl font-bold'}>
           {title}
         </h2>
         <button

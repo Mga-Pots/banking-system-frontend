@@ -1,5 +1,5 @@
-import { ago, referenceFor } from './time'
-import { scenario } from './scenario'
+import { ago, referenceFor } from "./time";
+import { scenario } from "./scenario";
 
 // transactionType: "cash_in" | "transfer". Amounts are integers in centavos.
 // sourceAccount and destinationAccount are account _ids.
@@ -11,7 +11,7 @@ import { scenario } from './scenario'
 // status: "pending" | "completed" | "failed" | "cancelled" | "flagged"
 // Dates are relative to now (see ./time.js).
 const make = (_id, when, suffix, fields) => {
-  const createdAt = ago(when)
+  const createdAt = ago(when);
   return {
     _id,
     referenceNumber: referenceFor(createdAt, suffix),
@@ -19,48 +19,96 @@ const make = (_id, when, suffix, fields) => {
     ...fields,
     createdAt,
     updatedAt: createdAt,
-  }
-}
+  };
+};
 
-const transfer = { transactionType: 'transfer' }
-const cashIn = { transactionType: 'cash_in', sourceAccount: null }
+const transfer = { transactionType: "transfer" };
+const cashIn = { transactionType: "cash_in", sourceAccount: null };
 
 export const transactions = [
   // Incoming from Luis, completed
-  make('t8', { m: 40 }, '0412', {
-    ...transfer, amount: 250000, sourceAccount: 'a4', destinationAccount: 'a1', performedBy: 'u6', status: 'completed',
+  make("t8", { m: 40 }, "0412", {
+    ...transfer,
+    amount: 250000,
+    sourceAccount: "a4",
+    destinationAccount: "a1",
+    performedBy: "u6",
+    status: "completed",
   }),
   // Held for review: the sender was charged, the recipient not yet credited
-  make('t3', { d: 1, h: 3 }, '1100', {
-    ...transfer, amount: 50000, sourceAccount: 'a1', destinationAccount: 'a2', performedBy: 'u1', status: 'pending',
-    flagReason: 'Held for staff review',
+  make("t3", { d: 1, h: 3 }, "1100", {
+    ...transfer,
+    amount: 50000,
+    sourceAccount: "a1",
+    destinationAccount: "a2",
+    performedBy: "u1",
+    status: "pending",
+    flagReason: "Held for staff review",
   }),
-  make('t4', { d: 2 }, '0921', {
-    ...cashIn, amount: 1000000, destinationAccount: 'a1', performedBy: 'u1', status: 'completed',
+  make("t4", { d: 2 }, "0921", {
+    ...cashIn,
+    amount: 1000000,
+    destinationAccount: "a1",
+    performedBy: "u1",
+    status: "completed",
   }),
-  make('t5', { d: 4 }, '0655', {
-    ...transfer, amount: 50000, sourceAccount: 'a1', destinationAccount: 'a3', performedBy: 'u1', status: 'failed',
+  make("t5", { d: 4 }, "0655", {
+    ...transfer,
+    amount: 50000,
+    sourceAccount: "a1",
+    destinationAccount: "a3",
+    performedBy: "u1",
+    status: "failed",
   }),
-  make('t6', { d: 6 }, '0310', {
-    ...transfer, amount: 75000, sourceAccount: 'a1', destinationAccount: 'a2', performedBy: 'u1', status: 'cancelled',
+  make("t6", { d: 6 }, "0310", {
+    ...transfer,
+    amount: 75000,
+    sourceAccount: "a1",
+    destinationAccount: "a2",
+    performedBy: "u1",
+    status: "cancelled",
   }),
-  make('t2', { d: 7 }, '1430', {
-    ...transfer, amount: 250000, sourceAccount: 'a1', destinationAccount: 'a2', performedBy: 'u1', status: 'completed',
+  make("t2", { d: 7 }, "1430", {
+    ...transfer,
+    amount: 250000,
+    sourceAccount: "a1",
+    destinationAccount: "a2",
+    performedBy: "u1",
+    status: "completed",
   }),
-  make('t7', { d: 12 }, '0827', {
-    ...transfer, amount: 120000, sourceAccount: 'a1', destinationAccount: 'a3', performedBy: 'u1', status: 'completed',
+  make("t7", { d: 12 }, "0827", {
+    ...transfer,
+    amount: 120000,
+    sourceAccount: "a1",
+    destinationAccount: "a3",
+    performedBy: "u1",
+    status: "completed",
   }),
-  make('t9', { d: 15 }, '1544', {
-    ...transfer, amount: 30000, sourceAccount: 'a1', destinationAccount: 'a2', performedBy: 'u1', status: 'flagged',
-    flagReason: 'Flagged for suspicious activity',
+  make("t9", { d: 15 }, "1544", {
+    ...transfer,
+    amount: 30000,
+    sourceAccount: "a1",
+    destinationAccount: "a2",
+    performedBy: "u1",
+    status: "flagged",
+    flagReason: "Flagged for suspicious activity",
   }),
-  make('t10', { d: 20 }, '1203', {
-    ...transfer, amount: 180000, sourceAccount: 'a1', destinationAccount: 'a4', performedBy: 'u1', status: 'completed',
+  make("t10", { d: 20 }, "1203", {
+    ...transfer,
+    amount: 180000,
+    sourceAccount: "a1",
+    destinationAccount: "a4",
+    performedBy: "u1",
+    status: "completed",
   }),
-  make('t1', { d: 24 }, '0915', {
-    ...cashIn, amount: 1000000, destinationAccount: 'a1', performedBy: 'u1', status: 'completed',
+  make("t1", { d: 24 }, "0915", {
+    ...cashIn,
+    amount: 1000000,
+    destinationAccount: "a1",
+    performedBy: "u1",
+    status: "completed",
   }),
-]
+];
 
 // Every mock transaction involves the logged-in customer, so a new customer has none.
-if (scenario === 'new') transactions.splice(0, transactions.length)
+if (scenario === "new") transactions.splice(0, transactions.length);

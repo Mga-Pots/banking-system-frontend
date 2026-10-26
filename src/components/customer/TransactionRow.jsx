@@ -10,7 +10,7 @@ export default function TransactionRow({ tx, myAccountId, names, onSelect }) {
   const { direction, title } = describeTransaction(tx, myAccountId, names)
   const incoming = direction === 'in'
   const inactive = isInactive(tx)
-  const amountTone = inactive ? 'text-muted line-through' : incoming ? 'text-wallet' : 'text-text'
+  const amountTone = inactive ? 'text-muted line-through' : incoming ? 'text-wallet' : 'text-error'
 
   const Icon = tx.transactionType === 'cash_in' ? PlusIcon : incoming ? ArrowDownLeftIcon : ArrowUpRightIcon
 

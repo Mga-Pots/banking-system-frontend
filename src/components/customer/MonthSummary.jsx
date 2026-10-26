@@ -37,24 +37,24 @@ export default function MonthSummary({ summary, loading }) {
           <Skeleton className="h-12" />
         </div>
       ) : (
-        <dl className="space-y-4">
+        <dl className="space-y-4 sm:max-lg:grid sm:max-lg:grid-cols-3 sm:max-lg:gap-6 sm:max-lg:space-y-0">
           <div>
             <dt className={labelClass}>Money out</dt>
-            <dd className="font-brand text-2xl font-semibold text-text">
+            <dd className="font-brand text-xl font-semibold text-error">
               <Amount centavos={summary.moneyOutThisMonth} sensitive />
             </dd>
           </div>
           <div>
             <dt className={labelClass}>Money in</dt>
-            <dd className="font-brand text-2xl font-semibold text-wallet">
+            <dd className="font-brand text-xl font-semibold text-wallet">
               <Amount centavos={summary.moneyInThisMonth} sensitive />
             </dd>
           </div>
-          <div className="border-t border-divider pt-4">
+          <div className="border-t border-divider pt-4 sm:max-lg:border-t-0 sm:max-lg:pt-0">
             <dt className={labelClass}>
               <span lang="fil">Net ngayong buwan</span>
             </dt>
-            <dd className="font-brand text-2xl font-semibold text-ink">
+            <dd className="font-brand text-xl font-semibold text-ink">
               <Amount centavos={Math.abs(net)} sign={net < 0 ? '−' : '+'} sensitive />
             </dd>
           </div>

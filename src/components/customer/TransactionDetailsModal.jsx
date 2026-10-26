@@ -27,7 +27,7 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
   const { direction, title } = describeTransaction(tx, myAccountId, names)
   const incoming = direction === 'in'
   const inactive = isInactive(tx)
-  const amountTone = inactive ? 'text-muted line-through' : incoming ? 'text-wallet' : 'text-text'
+  const amountTone = inactive ? 'text-muted line-through' : incoming ? 'text-wallet' : 'text-error'
 
   return (
     <Modal title="Transaction details" onClose={onClose}>

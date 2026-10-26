@@ -10,7 +10,7 @@ import { firstNameOf } from '../../utils/names'
 import { pesosToCentavos, sanitizeAmountInput } from '../../utils/parseAmount'
 
 const circle =
-  'flex size-12 cursor-pointer items-center justify-center rounded-full text-sm font-extrabold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet'
+  'flex size-12 cursor-pointer items-center justify-center rounded-full text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet'
 
 // Fill in a recipient and an amount, then press "Review transfer". It opens the
 // review step; nothing is sent from here. The first recent recipient starts filled in.
@@ -52,7 +52,7 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
   return (
     <Card aria-labelledby="quick-transfer-title">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 id="quick-transfer-title" className="text-xl font-extrabold text-text">
+        <h2 id="quick-transfer-title" className="text-xl font-bold text-text">
           Quick transfer
         </h2>
         <Link to="/customer/transfer" className="-my-3 inline-flex items-center py-3 text-sm font-bold text-wallet hover:underline">

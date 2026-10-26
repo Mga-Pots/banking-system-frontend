@@ -7,7 +7,10 @@ export default function Sensitive({ children, mask = '••••••' }) {
   if (!hidden) return children
   return (
     <>
-      <span aria-hidden="true">{mask}</span>
+      {/* Sora draws the bullet as a square, so the mask uses the body face */}
+      <span aria-hidden="true" className="font-sans font-medium">
+        {mask}
+      </span>
       <span className="sr-only">Hidden</span>
     </>
   )

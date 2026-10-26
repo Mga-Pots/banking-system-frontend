@@ -145,7 +145,7 @@ export default function CustomerDashboard() {
                 {loading ? (
                   <Skeleton className="mt-2 h-12 w-56 bg-white/10" />
                 ) : (
-                  <p className="mt-2 font-brand text-[44px] leading-none font-bold tracking-[-0.01em] text-white">
+                  <p className="mt-2 font-brand text-[38px] leading-none font-bold tracking-[-0.01em] text-white">
                     <Amount centavos={account.balance} sensitive split mask="₱ ••••••" />
                   </p>
                 )}

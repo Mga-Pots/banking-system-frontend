@@ -7,7 +7,7 @@ const light = {
 }
 
 // Bank account status pill. `onDark` is for the green account card, where an
-// active account gets a lime outline instead of a filled pill.
+// active account gets a Fresh Mint outline instead of a filled pill.
 export default function AccountStatus({ status, onDark = false }) {
   const style =
     onDark && status === 'active' ? 'border border-accent text-accent' : (light[status] ?? light.closed)

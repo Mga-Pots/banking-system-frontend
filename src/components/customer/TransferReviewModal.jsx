@@ -40,8 +40,8 @@ export default function TransferReviewModal({ recipientAccountNumber, amount, fr
   return (
     <Modal title="Review transfer" onClose={onClose}>
       <p className="text-sm text-muted">You are sending</p>
-      <p className="mb-4 text-[32px] leading-tight font-extrabold text-text">
-        <Amount centavos={amount} />
+      <p className="mb-4 font-brand text-[32px] leading-tight font-bold text-text">
+        <Amount centavos={amount} split />
       </p>
 
       <dl>

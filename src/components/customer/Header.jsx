@@ -5,8 +5,8 @@ import { useAuth } from '../../context/AuthContext'
 import { getMyNotifications } from '../../api/notifications'
 import { firstNameOf, initialsOf } from '../../utils/names'
 
-const circleButton =
-  'relative flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-divider bg-white text-ink transition hover:bg-mint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet'
+const circleBase =
+  'relative flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-divider text-ink transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet'
 
 const greetingFor = (hour) =>
   hour < 12 ? 'Magandang umaga' : hour < 18 ? 'Magandang hapon' : 'Magandang gabi'
@@ -20,6 +20,7 @@ export default function Header() {
   const [unread, setUnread] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
+  const triggerRef = useRef(null)
 
   // Count unread notifications for the bell, and refresh when the page changes.
   useEffect(() => {
@@ -39,7 +40,10 @@ export default function Header() {
       if (!menuRef.current?.contains(e.target)) setMenuOpen(false)
     }
     const onKeyDown = (e) => {
-      if (e.key === 'Escape') setMenuOpen(false)
+      if (e.key === 'Escape') {
+        setMenuOpen(false)
+        triggerRef.current?.focus() // keep keyboard users where they were
+      }
     }
     document.addEventListener('pointerdown', onPointerDown)
     document.addEventListener('keydown', onKeyDown)
@@ -68,7 +72,7 @@ export default function Header() {
       <div className="flex items-center gap-3">
         <Link
           to="/customer/notifications"
-          className={circleButton}
+          className={`${circleBase} bg-white hover:bg-mint`}
           aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
         >
           <BellIcon size={20} />
@@ -89,7 +93,8 @@ export default function Header() {
             aria-expanded={menuOpen}
             aria-haspopup="true"
             aria-label="Account menu"
-            className={`${circleButton} bg-mint text-sm font-bold hover:bg-mint`}
+            ref={triggerRef}
+            className={`${circleBase} bg-mint text-sm font-bold hover:brightness-95`}
           >
             {initialsOf(user?.name)}
           </button>
@@ -117,7 +122,7 @@ export default function Header() {
           )}
         </div>
 
-        <Link to="/customer/settings" className={circleButton} aria-label="Settings">
+        <Link to="/customer/settings" className={`${circleBase} bg-white hover:bg-mint`} aria-label="Settings">
           <GearIcon size={20} />
         </Link>
       </div>
