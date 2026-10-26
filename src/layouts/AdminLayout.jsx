@@ -1,13 +1,55 @@
-import { Outlet } from 'react-router-dom'
-import Navbar from '../components/Navbar'
+import { useState } from 'react'
+import { Link, Outlet } from 'react-router-dom'
+import Logo from '../components/auth/Logo'
+import Modal from '../components/ui/Modal'
+import { MenuIcon } from '../components/ui/Icons'
+import { ToastProvider } from '../components/ui/Toast'
+import AdminHeader from '../components/admin/Header'
+import AdminSidebar from '../components/admin/Sidebar'
+import { PrivacyProvider } from '../context/PrivacyContext'
 
+// Admin shell, copied from the customer one: sidebar on the left (a menu button on
+// small screens), the header on top, and the page below.
 export default function AdminLayout() {
+  const [menuOpen, setMenuOpen] = useState(false)
+
   return (
-    <div>
-      <Navbar title="Banking System - Admin" />
-      <main>
-        <Outlet />
-      </main>
-    </div>
+    <PrivacyProvider>
+      <ToastProvider>
+        <div className="min-h-dvh bg-canvas text-text md:grid md:grid-cols-[232px_1fr]">
+          <aside aria-label="Sidebar" className="sticky top-0 hidden h-dvh border-r border-divider bg-white md:block">
+            <AdminSidebar />
+          </aside>
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-3 border-b border-divider bg-white px-4 py-3 md:hidden">
+              <button
+                type="button"
+                onClick={() => setMenuOpen(true)}
+                aria-label="Open menu"
+                className="flex size-11 cursor-pointer items-center justify-center rounded-full text-ink transition hover:bg-mint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
+              >
+                <MenuIcon size={22} />
+              </button>
+              <Link to="/admin" className="-my-2 flex items-center gap-2 py-2 font-brand text-2xl font-bold text-ink">
+                <Logo size={32} />
+                <span>sinop</span>
+              </Link>
+            </div>
+
+            <main className="px-4 py-6 sm:px-6 lg:px-8">
+              <AdminHeader />
+              <Outlet />
+            </main>
+          </div>
+        </div>
+
+        {menuOpen && (
+          <Modal title="Menu" hideTitle placement="left" flush onClose={() => setMenuOpen(false)}>
+            <AdminSidebar onNavigate={() => setMenuOpen(false)} />
+          </Modal>
+        )}
+      </ToastProvider>
+    </PrivacyProvider>
   )
 }
