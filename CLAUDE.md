@@ -40,6 +40,7 @@ src/
 - **Mock switch:** every api function checks `import.meta.env.VITE_USE_MOCK`. If it's `"true"`, return mock data after a short delay; otherwise call the real endpoint. Mock responses must have exactly the same shape as real ones.
 - **Mock scenarios:** with `VITE_USE_MOCK=true`, open any page with `?scenario=frozen` (frozen account) or `?scenario=new` (brand-new customer) to see those states. `?scenario=default` turns it off.
 - **Voice:** English is the main language. Light Taglish touches go only in warm moments (greeting, success messages, empty states, a few labels like "Net ngayong buwan"), with `lang="fil"` on the Filipino words. Errors, frozen or held states, and anything about money rules stay in plain English. Have a Filipino speaker check new strings.
+- **Page titles:** each customer page's title lives in `src/components/customer/pageTitles.js` and shows in the header's left slot (the overview shows the greeting there instead). Pages don't draw their own big heading; when you add a customer page, add its title to that file.
 - **Private values:** wrap balances, account numbers and totals in `<Sensitive>` so the dashboard's "hide details" eye button covers them all.
 - **Response shape** (from the backend, and from mocks):
   - success: `{ success: true, data: ... }`

@@ -1,0 +1,230 @@
+import { useEffect, useRef, useState } from 'react'
+import Amount from '../../components/ui/Amount'
+import Button from '../../components/ui/Button'
+import Card from '../../components/ui/Card'
+import Input from '../../components/ui/Input'
+import Skeleton from '../../components/ui/Skeleton'
+import { LockIcon } from '../../components/ui/Icons'
+import { useToast } from '../../components/ui/Toast'
+import AmountPresets from '../../components/customer/AmountPresets'
+import CashInSuccess from '../../components/customer/CashInSuccess'
+import { getMyAccount } from '../../api/accounts'
+import { cashIn } from '../../api/transactions'
+import { pesosToCentavos, sanitizeAmountInput } from '../../utils/parseAmount'
+
+const PRESETS = [50000, 100000, 500000, 1000000] // ₱500, ₱1,000, ₱5,000, ₱10,000
+
+const messageOf = (err) => err.response?.data?.message ?? err.message
+
+// Turns what was typed into centavos plus the reason it can't be used yet, if any.
+// A trailing point ("12.") is fine while the customer is still typing.
+const readAmount = (text) => {
+  if (text === '') return { centavos: null, problem: 'Enter an amount to continue.', typing: true }
+  const centavos = pesosToCentavos(text.replace(/\.$/, ''))
+  if (centavos === null) return { centavos: null, problem: 'Enter a valid amount, like 1,000 or 250.50.' }
+  if (centavos <= 0) return { centavos: null, problem: 'Enter an amount greater than ₱0.00.' }
+  return { centavos, problem: '' }
+}
+
+// Loads the account and returns the page's load state; it never throws.
+const fetchAccount = () =>
+  getMyAccount().then(
+    (res) => ({ status: 'ready', account: res.data, error: '' }),
+    (err) => ({ status: 'error', account: null, error: messageOf(err) }),
+  )
+
+const blockedMessage = {
+  frozen:
+    'Your account is frozen. Cash in is paused until staff reactivate it. Please contact sinop staff for help.',
+  closed: 'This account is closed, so funds can’t be added.',
+}
+
+export default function CashIn() {
+  const { showToast } = useToast()
+  const [load, setLoad] = useState({ status: 'loading', account: null, error: '' })
+  const [amountText, setAmountText] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+  const [result, setResult] = useState(null) // { amount, balance, referenceNumber }
+  const [addingMore, setAddingMore] = useState(false)
+  const inputRef = useRef(null)
+  const successRef = useRef(null)
+
+  useEffect(() => {
+    let active = true
+    fetchAccount().then((next) => active && setLoad(next))
+    return () => {
+      active = false
+    }
+  }, [])
+
+  // After a successful cash in, move focus to the result.
+  useEffect(() => {
+    if (result) successRef.current?.focus()
+  }, [result])
+
+  const { account } = load
+  const loading = load.status === 'loading'
+  const blocked = Boolean(account) && account.status !== 'active'
+  const { centavos, problem, typing } = readAmount(amountText)
+  const canSubmit = centavos !== null && !loading && !blocked && !submitting
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!canSubmit) {
+      inputRef.current?.focus()
+      return
+    }
+    setSubmitError('')
+    setSubmitting(true)
+    try {
+      const res = await cashIn({ amount: centavos })
+      // The response is the transaction, so ask for the account again to show the real balance.
+      let balance = account.balance + centavos
+      try {
+        balance = (await getMyAccount()).data.balance
+      } catch {
+        // keep the computed balance; the overview will refresh it
+      }
+      setLoad((current) => ({ ...current, account: { ...current.account, balance } }))
+      setResult({ amount: centavos, balance, referenceNumber: res.data.referenceNumber })
+      showToast(`Naidagdag na. Ref ${res.data.referenceNumber}`)
+    } catch (err) {
+      setSubmitError(messageOf(err))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const addMore = () => {
+    setResult(null)
+    setAmountText('')
+    setAddingMore(true)
+  }
+
+  return (
+    <div>
+      {/* The page title ("Cash in") is shown in the header */}
+      <p className="text-[15px] text-muted">Add simulated funds to your account. No real money moves.</p>
+
+      <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,560px)_300px]">
+        <Card aria-busy={loading}>
+          {load.status === 'error' ? (
+            <div role="alert">
+              <p className="text-[15px] font-semibold text-text">We couldn’t load your account</p>
+              <p className="mt-1 mb-4 text-sm text-muted">{load.error}</p>
+              <Button
+                onClick={() => {
+                  setLoad({ status: 'loading', account: null, error: '' })
+                  fetchAccount().then(setLoad)
+                }}
+              >
+                Try again
+              </Button>
+            </div>
+          ) : result ? (
+            <CashInSuccess
+              ref={successRef}
+              amount={result.amount}
+              balance={result.balance}
+              referenceNumber={result.referenceNumber}
+              onAddMore={addMore}
+            />
+          ) : (
+            <form onSubmit={submit} noValidate>
+              {blocked && (
+                <div
+                  role="status"
+                  className="mb-5 flex items-start gap-3 rounded-2xl bg-status-flagged px-4 py-3 text-sm font-semibold text-status-flagged-text"
+                >
+                  <LockIcon size={18} className="mt-0.5 shrink-0" />
+                  <p>{blockedMessage[account.status] ?? 'This account can’t receive funds right now.'}</p>
+                </div>
+              )}
+
+              <fieldset disabled={blocked || submitting} className="min-w-0 border-0 p-0">
+                <legend className="sr-only">Cash in details</legend>
+
+                <div className="mb-5 flex items-end justify-between gap-4 border-b border-divider pb-5">
+                  <p className="text-sm text-muted">Current balance</p>
+                  {loading ? (
+                    <Skeleton className="h-7 w-32" />
+                  ) : (
+                    <p className="font-brand text-xl font-semibold text-text">
+                      <Amount centavos={account.balance} sensitive />
+                    </p>
+                  )}
+                </div>
+
+                <Input
+                  ref={inputRef}
+                  id="cash-in-amount"
+                  label="Amount"
+                  prefix="₱"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  autoFocus={addingMore}
+                  maxLength={12}
+                  placeholder="0.00"
+                  value={amountText}
+                  onChange={(e) => setAmountText(sanitizeAmountInput(e.target.value))}
+                  error={!typing && problem ? problem : undefined}
+                />
+
+                <div className="mt-4">
+                  <AmountPresets
+                    presets={PRESETS}
+                    value={centavos}
+                    onSelect={(preset) => setAmountText(String(preset / 100))}
+                    disabled={blocked || submitting}
+                  />
+                </div>
+
+                <p aria-live="polite" className="mt-5 text-sm text-muted">
+                  {centavos !== null && account ? (
+                    <>
+                      Your balance will be{' '}
+                      <Amount centavos={account.balance + centavos} sensitive className="font-bold text-text" />
+                    </>
+                  ) : (
+                    'Your new balance will show here.'
+                  )}
+                </p>
+
+                {submitError && (
+                  <p role="alert" className="mt-4 text-sm font-semibold text-error">
+                    {submitError}
+                  </p>
+                )}
+
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="mt-5 w-full"
+                  disabled={!canSubmit}
+                  aria-describedby="cash-in-reason"
+                >
+                  {submitting ? 'Adding funds…' : 'Add funds'}
+                </Button>
+                <p id="cash-in-reason" className="mt-2 min-h-5 text-center text-xs text-muted">
+                  {blocked || loading || canSubmit || submitting ? '' : problem}
+                </p>
+              </fieldset>
+            </form>
+          )}
+        </Card>
+
+        <Card as="aside" aria-labelledby="how-title">
+          <h2 id="how-title" className="text-base font-bold text-text">
+            How cash in works
+          </h2>
+          <ul className="mt-3 space-y-3 text-sm text-label">
+            <li>These are simulated funds. No real money moves, and nothing is linked to a real bank.</li>
+            <li>The amount is added to your account right away.</li>
+            <li>You’ll see it under Recent transactions on your overview.</li>
+          </ul>
+        </Card>
+      </div>
+    </div>
+  )
+}

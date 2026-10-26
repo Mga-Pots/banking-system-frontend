@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useMatch, useNavigate } from 'react-router-dom'
 import { BellIcon, ChevronDownIcon, LogOutIcon, UserIcon } from '../ui/Icons'
 import { useAuth } from '../../context/AuthContext'
 import { getMyNotifications } from '../../api/notifications'
 import { firstNameOf, initialsOf } from '../../utils/names'
+import { titleFor } from './pageTitles'
 
 // The bell and avatar are round, like every other button in the app.
 const circleBase =
@@ -23,6 +24,8 @@ export default function Header() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const onOverview = Boolean(useMatch('/customer')) // the greeting belongs to the overview only
+  const title = titleFor(pathname)
   const [unread, setUnread] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
@@ -66,16 +69,24 @@ export default function Header() {
 
   return (
     <header className="mb-6 flex items-center justify-between gap-4">
-      <p className="min-w-0">
-        <span lang="fil" className="block text-[15px] text-label">
-          {greetingFor(new Date().getHours())},
-        </span>
-        <span className="block truncate text-[28px] leading-tight font-bold text-ink">
-          {firstNameOf(user?.name)}
-        </span>
-      </p>
+      {/* Left slot: the greeting on the overview, the page title everywhere else. The
+          minimum height keeps the big line at the same place on every page. */}
+      <div className="flex min-h-[58px] min-w-0 flex-col justify-end">
+        {onOverview ? (
+          <p>
+            <span lang="fil" className="block text-[15px] text-label">
+              {greetingFor(new Date().getHours())},
+            </span>
+            <span className="block truncate text-[28px] leading-tight font-bold text-ink">
+              {firstNameOf(user?.name)}
+            </span>
+          </p>
+        ) : (
+          title && <h1 className="truncate text-[28px] leading-tight font-bold text-ink">{title}</h1>
+        )}
+      </div>
 
-      <div className="flex items-center gap-3">
+      <div className="ml-auto flex items-center gap-3">
         <Link
           to="/customer/notifications"
           className={`${circleBase} ${focusRing} bg-white hover:bg-mint`}

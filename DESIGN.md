@@ -279,8 +279,11 @@ Small pills (12px, bold, 4px by 12px padding) in the status color pairs. Account
 
 ### Navigation
 - **Sidebar:** 232px, white, a hairline on its right edge. The logo and wordmark sit on top with a quiet lowercase tagline, *masinop sa pera*, beneath. Items are 48px high with an icon and 14px semibold text; the active item is a Mint Wash fill with Deep Pine text. The verify card sits at the bottom until staff verify the customer.
-- **Header:** the greeting (a small Filipino salutation above the first name) on the left; on the right two 44px circular buttons with a hairline border: notifications with an unread badge, and the avatar with initials, which carries a small round down-arrow badge on its bottom-right corner. The avatar is the single way into profile and settings. Its popover (288px wide) holds an identity block (initials, name, email), one "Profile & settings" entry with a one-line description, a hairline, and "Log out" last, each with a line icon.
+- **Header:** the left slot holds the greeting on the overview (a small Filipino salutation above the first name) and the page title on every other page, in the same 28px bold style and at the same height, so titles are uniform across pages; on the right two 44px circular buttons with a hairline border: notifications with an unread badge, and the avatar with initials, which carries a small round down-arrow badge on its bottom-right corner. The avatar is the single way into profile and settings. Its popover (288px wide) holds an identity block (initials, name, email), one "Profile & settings" entry with a one-line description, a hairline, and "Log out" last, each with a line icon.
 - **Mobile:** a top bar with a menu button and the logo; the sidebar opens as a left drawer.
+
+### Quick-amount presets
+A row of small pill toggle buttons (44px high) that fill an amount field with a round figure (₱500, ₱1,000, ₱5,000, ₱10,000 on the Cash in page). The preset that matches the typed amount shows as selected: a Deep Pine fill with white text. Unselected presets are white with a Field Edge border. Typing a different amount clears the selection, so the buttons and the field never disagree.
 
 ### Dialogs
 Native `<dialog>` elements, centered, up to 440px wide, 24px radius, a 24px padded body and a 44px close button. They trap focus, close on Esc or a click on the backdrop, and restore focus to what opened them.
