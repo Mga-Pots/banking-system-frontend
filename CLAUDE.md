@@ -83,7 +83,7 @@ src/
 Mock data must use these exact field names. IDs are strings (`_id`); dates are ISO strings; amounts and balances are integers in centavos.
 
 - **User:** `_id`, `name`, `email`, `contactNumber` (optional; omitted when not set, never sent as `""`), `role` (`customer` | `staff` | `admin`), `status`, `isVerified` (boolean), `notificationPreferences` (`{ email: true, sms: false }`), `createdAt`, `updatedAt`. Never expose `passwordHash`.
-- **BankAccount:** `_id`, `accountNumber` (12 digits, no spaces; format only for display), `owner` (user `_id`), `balance`, `status` (`active` | `frozen` | `closed`), `createdAt`, `updatedAt`.
+- **BankAccount:** `_id`, `accountNumber` (12 digits, no spaces; format only for display), `owner` (user `_id`), `balance`, `status` (`active` | `frozen` | `closed`), `cardLastFour` (4 digits; **assumption to confirm with the backend**), `createdAt`, `updatedAt`. The card number is not the account number. The full card number is never in account responses; it comes only from `POST /accounts/me/card-details`.
 - **Transaction:** `_id`, `referenceNumber`, `transactionType` (`cash_in` | `transfer`), `amount`, `sourceAccount` (empty for `cash_in`), `destinationAccount` (customer responses carry each account as `{ _id, accountNumber }`; this is an **assumption to confirm with the backend**, handled only in `src/utils/transactions.js`), `performedBy` (user `_id`), `status`, `flagReason` (`null` unless flagged or held for review), `createdAt`, `updatedAt`.
 - **Notification:** `_id`, `recipient` (user `_id`), `type` (`transaction` | `account` | `security` | `system`), `message`, `relatedTransaction` (optional), `isRead` (boolean), `createdAt`.
 - **AuditLog:** `_id`, `actor` (user `_id`), `action`, `targetType` (`User` | `BankAccount` | `Transaction`), `targetId`, `createdAt`.
@@ -105,6 +105,7 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 
 - `GET /accounts/me`
 - `GET /accounts/me/balance` → `{ accountNumber, balance, status }`
+- `POST /accounts/me/card-details` with `{ password }` → `data: { cardNumber (16 digits, no spaces), cardExpiry ("MM/YY"), cardCvc }`. Needs the customer's password and a verified account; wrong password → `{ success: false, message: "Incorrect password" }`. Assumed, to be confirmed. The dashboard never stores the result: it lives in the modal only. In mock mode the password is `Password123`.
 - `GET /accounts/lookup/:accountNumber` (checks a transfer recipient; assumed response `{ accountNumber, displayName, initials }`, to be confirmed)
 - `GET /accounts/:id` (customers: own account only)
 
