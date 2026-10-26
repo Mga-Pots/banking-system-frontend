@@ -7,6 +7,8 @@ import Skeleton from '../../components/ui/Skeleton'
 import Weave from '../../components/ui/Weave'
 import { ArrowRightIcon, EyeIcon, EyeOffIcon, LockIcon, PlusIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
+import CopyButton from '../../components/ui/CopyButton'
+import Sensitive from '../../components/ui/Sensitive'
 import AccountCard from '../../components/customer/AccountCard'
 import AccountDetailsModal from '../../components/customer/AccountDetailsModal'
 import MonthSummary from '../../components/customer/MonthSummary'
@@ -14,6 +16,7 @@ import QuickTransfer from '../../components/customer/QuickTransfer'
 import TransactionDetailsModal from '../../components/customer/TransactionDetailsModal'
 import TransactionRow from '../../components/customer/TransactionRow'
 import TransferReviewModal from '../../components/customer/TransferReviewModal'
+import { formatAccountNumber, lastFour } from '../../utils/formatAccountNumber'
 import { useAuth } from '../../context/AuthContext'
 import { usePrivacy } from '../../context/PrivacyContext'
 import { getMyAccount, getRecentRecipients } from '../../api/accounts'
@@ -76,6 +79,7 @@ export default function CustomerDashboard() {
   }
 
   const frozen = account?.status === 'frozen'
+  const verified = Boolean(user?.isVerified)
   const transactions = history?.transactions ?? []
   const onHold = history?.counts?.pending ?? 0
   // People we know by account number, so rows can say "To Pedro G." instead of a number
@@ -126,11 +130,33 @@ export default function CustomerDashboard() {
           <section
             aria-label="Account balance"
             aria-busy={loading}
-            className="relative isolate grid gap-6 overflow-hidden rounded-[20px] bg-ink p-6 text-white md:grid-cols-2"
+            className={`relative isolate grid gap-6 overflow-hidden rounded-[20px] bg-ink p-6 text-white ${verified ? 'md:grid-cols-2' : ''}`}
           >
             <Weave className="text-white [mask-image:linear-gradient(to_left,black,transparent_80%)]" opacity={0.1} />
             <div className="relative flex flex-col justify-between gap-6">
               <div>
+                {!verified && (
+                  <div className="mb-4">
+                    <p className="text-[13px] text-white/70">Account number</p>
+                    {loading ? (
+                      <Skeleton className="mt-1 h-7 w-48 bg-white/10" />
+                    ) : (
+                      <div className="mt-1 flex items-center gap-2">
+                        <p className="text-xl font-semibold tracking-[0.06em] whitespace-nowrap tabular-nums">
+                          <Sensitive mask={`•••• •••• ${lastFour(account.accountNumber)}`}>
+                            {formatAccountNumber(account.accountNumber)}
+                          </Sensitive>
+                        </p>
+                        <CopyButton
+                          value={account.accountNumber}
+                          label="Copy account number"
+                          onCopied={() => showToast('Account number copied')}
+                          className="text-white hover:bg-white/15"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <p className="text-[15px] text-white/80">Available balance</p>
                   <button
@@ -165,16 +191,17 @@ export default function CustomerDashboard() {
               </div>
             </div>
 
-            {loading ? (
-              <Skeleton className="relative min-h-[190px] bg-white/10" />
-            ) : (
-              <AccountCard
-                account={account}
-                holder={user?.name ?? ''}
-                onViewDetails={() => setDetailsOpen(true)}
-                onCopied={() => showToast('Account number copied')}
-              />
-            )}
+            {verified &&
+              (loading ? (
+                <Skeleton className="relative min-h-[190px] bg-white/10" />
+              ) : (
+                <AccountCard
+                  account={account}
+                  holder={user?.name ?? ''}
+                  onViewDetails={() => setDetailsOpen(true)}
+                  onCopied={() => showToast('Account number copied')}
+                />
+              ))}
           </section>
 
           <Card aria-labelledby="recent-title" aria-busy={loading}>
