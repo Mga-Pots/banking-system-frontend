@@ -282,6 +282,13 @@ Small pills (12px, bold, 4px by 12px padding) in the status color pairs. Account
 - **Header:** the left slot holds the greeting on the overview (a small Filipino salutation above the first name) and the page title on every other page, in the same 28px bold style and at the same height, so titles are uniform across pages; on the right two 44px circular buttons with a hairline border: notifications with an unread badge, and the avatar with initials, which carries a small round down-arrow badge on its bottom-right corner. The avatar is the single way into profile and settings. Its popover (288px wide) holds an identity block (initials, name, email), one "Profile & settings" entry with a one-line description, a hairline, and "Log out" last, each with a line icon.
 - **Mobile:** a top bar with a menu button and the logo; the sidebar opens as a left drawer.
 
+### Dropdown fields and read-only fields
+A dropdown is formatted exactly like a text input: a 14px bold label above, then a 48px field with a 1.5px Field Edge border, 12px corners and a Field Wash fill, with the same Pine Green focus ring. A small Deep Pine down arrow on the right shows there is a list to choose from, and a muted 14px hint sits underneath. Only use one when there is a real choice (the Cash in page's "From" lists the single funding source, simulated funds, for now).
+
+A value that can't be edited, such as the customer's own account on the Cash in page ("Account Details"), uses the same label but a flatter box: a hairline border and a Ground Mist fill, with no arrow, so it doesn't look like a field to type in. Its hint carries the current balance.
+
+Fields of one form stack in a single card, 20px apart, with no card per section. A muted line under the amount can state a rule, like "Transfer limit: ₱50,000 per cash in".
+
 ### Quick-amount presets
 A row of small pill toggle buttons (44px high) that fill an amount field with a round figure (₱500, ₱1,000, ₱5,000, ₱10,000 on the Cash in page). The preset that matches the typed amount shows as selected: a Deep Pine fill with white text. Unselected presets are white with a Field Edge border. Typing a different amount clears the selection, so the buttons and the field never disagree.
 

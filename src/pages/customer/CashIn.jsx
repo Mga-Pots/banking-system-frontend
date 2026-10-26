@@ -3,16 +3,27 @@ import Amount from "../../components/ui/Amount";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
+import ReadOnlyField from "../../components/ui/ReadOnlyField";
+import Select from "../../components/ui/Select";
 import Skeleton from "../../components/ui/Skeleton";
 import { LockIcon } from "../../components/ui/Icons";
 import { useToast } from "../../components/ui/Toast";
 import AmountPresets from "../../components/customer/AmountPresets";
 import CashInSuccess from "../../components/customer/CashInSuccess";
+import { useAuth } from "../../context/AuthContext";
+import { usePrivacy } from "../../context/PrivacyContext";
 import { getMyAccount } from "../../api/accounts";
 import { cashIn } from "../../api/transactions";
+import { formatAccountNumber, lastFour } from "../../utils/formatAccountNumber";
+import { formatPeso } from "../../utils/formatPeso";
 import { pesosToCentavos, sanitizeAmountInput } from "../../utils/parseAmount";
 
 const PRESETS = [50000, 100000, 500000, 1000000]; // ₱500, ₱1,000, ₱5,000, ₱10,000
+
+// The most that can be added in one cash in (₱50,000). The page enforces it and shows it
+// to the customer. To be confirmed with the backend (see docs/alignment-fixes.md).
+const CASH_IN_LIMIT = 5000000;
+const LIMIT_TEXT = formatPeso(CASH_IN_LIMIT).replace(/\.00$/, "");
 
 const messageOf = (err) => err.response?.data?.message ?? err.message;
 
@@ -33,6 +44,11 @@ const readAmount = (text) => {
     };
   if (centavos <= 0)
     return { centavos: null, problem: "Enter an amount greater than ₱0.00." };
+  if (centavos > CASH_IN_LIMIT)
+    return {
+      centavos: null,
+      problem: `Cash in is limited to ${LIMIT_TEXT} at a time.`,
+    };
   return { centavos, problem: "" };
 };
 
@@ -51,6 +67,8 @@ const blockedMessage = {
 
 export default function CashIn() {
   const { showToast } = useToast();
+  const { user } = useAuth();
+  const { hidden } = usePrivacy();
   const [load, setLoad] = useState({
     status: "loading",
     account: null,
@@ -176,37 +194,58 @@ export default function CashIn() {
               >
                 <legend className="sr-only">Cash in details</legend>
 
-                <Input
-                  ref={inputRef}
-                  id="cash-in-amount"
-                  label="Amount"
-                  prefix="₱"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  autoFocus={addingMore}
-                  maxLength={12}
-                  placeholder="0.00"
-                  value={amountText}
-                  onChange={(e) =>
-                    setAmountText(sanitizeAmountInput(e.target.value))
+                {/* Every customer has exactly one account, so there is nothing to choose */}
+                <ReadOnlyField
+                  id="cash-in-account"
+                  label="Account Details"
+                  hint={
+                    loading ? (
+                      <Skeleton className="h-5 w-44" />
+                    ) : (
+                      <>
+                        Current balance:{" "}
+                        <Amount
+                          centavos={account.balance}
+                          sensitive
+                          className="font-bold text-ink"
+                        />
+                      </>
+                    )
                   }
-                  error={!typing && problem ? problem : undefined}
-                />
-
-                <div className="mt-2 text-sm text-muted">
+                >
                   {loading ? (
-                    <Skeleton className="h-5 w-48" />
+                    <Skeleton className="h-5 w-56" />
                   ) : (
-                    <p>
-                      Current balance:{" "}
-                      <Amount
-                        centavos={account.balance}
-                        sensitive
-                        className="font-bold text-ink"
-                      />
-                    </p>
+                    `${user?.name} · ${
+                      hidden
+                        ? `•••• •••• ${lastFour(account.accountNumber)}`
+                        : formatAccountNumber(account.accountNumber)
+                    }`
                   )}
+                </ReadOnlyField>
+
+                <div className="mt-5">
+                  <Input
+                    ref={inputRef}
+                    id="cash-in-amount"
+                    label="Amount"
+                    prefix="₱"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    autoFocus={addingMore}
+                    maxLength={12}
+                    placeholder="0.00"
+                    value={amountText}
+                    onChange={(e) =>
+                      setAmountText(sanitizeAmountInput(e.target.value))
+                    }
+                    error={!typing && problem ? problem : undefined}
+                  />
                 </div>
+
+                <p className="mt-2 text-sm text-muted">
+                  Transfer limit: {LIMIT_TEXT} per cash in
+                </p>
 
                 <div className="mt-4">
                   <AmountPresets
@@ -217,22 +256,16 @@ export default function CashIn() {
                   />
                 </div>
 
-                {/* Empty until an amount is entered; the space is kept so the button doesn't jump */}
-                <p
-                  aria-live="polite"
-                  className="mt-4 min-h-5 text-sm text-muted"
-                >
-                  {centavos !== null && account && (
-                    <>
-                      New balance:{" "}
-                      <Amount
-                        centavos={account.balance + centavos}
-                        sensitive
-                        className="font-bold text-ink"
-                      />
-                    </>
-                  )}
-                </p>
+                {/* There is no real source of money: the funds are simulated */}
+                <div className="mt-5">
+                  <Select
+                    id="cash-in-from"
+                    label="From"
+                    hint="Simulated funds, so no real money moves."
+                  >
+                    <option value="simulated">Simulated funds</option>
+                  </Select>
+                </div>
 
                 {submitError && (
                   <p
