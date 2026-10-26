@@ -11,7 +11,7 @@ import AccountCard from '../../components/customer/AccountCard'
 import AccountDetailsModal from '../../components/customer/AccountDetailsModal'
 import MonthSummary from '../../components/customer/MonthSummary'
 import QuickTransfer from '../../components/customer/QuickTransfer'
-import TransactionDrawer from '../../components/customer/TransactionDrawer'
+import TransactionDetailsModal from '../../components/customer/TransactionDetailsModal'
 import TransactionRow from '../../components/customer/TransactionRow'
 import TransferReviewModal from '../../components/customer/TransferReviewModal'
 import { useAuth } from '../../context/AuthContext'
@@ -241,7 +241,7 @@ export default function CustomerDashboard() {
       </div>
 
       {openTx && (
-        <TransactionDrawer tx={openTx} myAccountId={account._id} names={names} onClose={() => setOpenTx(null)} />
+        <TransactionDetailsModal tx={openTx} myAccountId={account._id} names={names} onClose={() => setOpenTx(null)} />
       )}
       {detailsOpen && (
         <AccountDetailsModal account={account} holder={user?.name ?? ''} onClose={() => setDetailsOpen(false)} />

@@ -22,15 +22,15 @@ function Row({ label, children }) {
   )
 }
 
-// Side panel with everything about one transaction.
-export default function TransactionDrawer({ tx, myAccountId, names, onClose }) {
+// Dialog with everything about one transaction.
+export default function TransactionDetailsModal({ tx, myAccountId, names, onClose }) {
   const { direction, title } = describeTransaction(tx, myAccountId, names)
   const incoming = direction === 'in'
   const inactive = isInactive(tx)
   const amountTone = inactive ? 'text-muted line-through' : incoming ? 'text-wallet' : 'text-text'
 
   return (
-    <Modal title="Transaction details" placement="right" onClose={onClose}>
+    <Modal title="Transaction details" onClose={onClose}>
       <p className="text-[15px] font-semibold text-text">{title}</p>
       <p className={`mt-1 font-brand text-[32px] leading-tight font-bold ${amountTone}`}>
         <Amount centavos={tx.amount} sign={inactive ? '' : incoming ? '+' : '−'} split />
