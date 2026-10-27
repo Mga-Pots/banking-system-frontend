@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import Modal from '../ui/Modal'
+import { useToast } from '../ui/Toast'
 import Amount from '../ui/Amount'
 import Button from '../ui/Button'
+import CopyButton from '../ui/CopyButton'
 import StatusBadge from '../ui/StatusBadge'
 import { lastFour } from '../../utils/formatAccountNumber'
 import { formatDateTime } from '../../utils/formatDate'
@@ -25,6 +27,7 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
   const { direction, maskedTitle } = describeTransaction(tx, myAccountId, names)
   const incoming = direction === 'in'
   const inactive = isInactive(tx)
+  const { showToast } = useToast()
   const amountTone = inactive ? 'text-muted line-through' : incoming ? 'text-wallet' : 'text-error'
 
   const [confirming, setConfirming] = useState(false)
@@ -67,7 +70,17 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
 
       <dl>
         <Row label="Type">{tx.transactionType === 'cash_in' ? 'Cash in' : 'Transfer'}</Row>
-        <Row label="Reference number">{tx.referenceNumber}</Row>
+        <Row label="Reference number">
+          <span className="inline-flex items-center gap-1">
+            {tx.referenceNumber}
+            <CopyButton
+              value={tx.referenceNumber}
+              label="Copy reference number"
+              onCopied={() => showToast('Reference number copied')}
+              className="-my-1.5 text-muted hover:bg-field hover:text-ink focus-visible:outline-wallet"
+            />
+          </span>
+        </Row>
         <Row label="Date and time">{formatDateTime(tx.createdAt)}</Row>
         {showAccountRow && (
           <Row label="Account">
