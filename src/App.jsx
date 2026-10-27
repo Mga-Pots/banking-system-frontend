@@ -11,6 +11,7 @@ import CashIn from './pages/customer/CashIn'
 import ComingSoon from './pages/customer/ComingSoon'
 import StaffDashboard from './pages/staff/Dashboard'
 import AdminDashboard from './pages/admin/Dashboard'
+import AdminUsers from './pages/admin/Users'
 
 function Home() {
   const { role } = useAuth()
@@ -48,8 +49,9 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<AdminUsers />} />
               {/* Not built yet: placeholders so the sidebar links work */}
-              {['users', 'accounts', 'transactions', 'staff', 'audit-log', 'notification-log'].map((path) => (
+              {['accounts', 'transactions', 'staff', 'audit-log', 'notification-log'].map((path) => (
                 <Route key={path} path={path} element={<ComingSoon />} />
               ))}
               <Route path="*" element={<Navigate to="/admin" replace />} />
