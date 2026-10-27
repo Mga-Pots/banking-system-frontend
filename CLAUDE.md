@@ -70,7 +70,7 @@ src/
 - **Transactions have only two types: `cash_in` and `transfer`.** There is **no cash-out or withdrawal** feature. Do not create functions, mock data, or UI for it.
   - `cash_in`: adds simulated funds to the customer's own account (no real money).
   - `transfer`: sends funds to another account by account number. Must check: amount > 0, sufficient balance, both accounts active, not the same account.
-  - Transfers complete immediately unless held for review (`holdForReview: true`, or at/above a backend limit that is still being confirmed). A held transfer is `pending` with `flagReason: "Held for staff review"`: the sender is already charged, the recipient isn't credited yet.
+  - There is no transfer limit. Transfers **under ₱50,000** complete immediately, with no approval. Transfers of **₱50,000 or more** need bank approval before they go through (the threshold lives in `src/utils/transferRules.js`; whether exactly ₱50,000 needs approval is an **assumption to confirm with the backend**). The same holds for `holdForReview: true`. A held transfer is `pending` with `flagReason: "Held for staff review"`: the sender is already charged, the recipient isn't credited yet.
   - Only the sender can cancel, and only a `pending` transfer; the amount is refunded to the sender.
   - Customers don't see incoming transfers until they're `completed`.
 - **Transaction statuses:** `pending`, `completed`, `failed`, `cancelled`, `flagged`.
@@ -83,7 +83,7 @@ src/
 Mock data must use these exact field names. IDs are strings (`_id`); dates are ISO strings; amounts and balances are integers in centavos.
 
 - **User:** `_id`, `name`, `email`, `contactNumber` (optional; omitted when not set, never sent as `""`), `role` (`customer` | `staff` | `admin`), `status`, `isVerified` (boolean), `notificationPreferences` (`{ email: true, sms: false }`), `createdAt`, `updatedAt`. Never expose `passwordHash`.
-- **BankAccount:** `_id`, `accountNumber` (12 digits, no spaces; format only for display), `owner` (user `_id`), `balance`, `status` (`active` | `frozen` | `closed`), `createdAt`, `updatedAt`.
+- **BankAccount:** `_id`, `accountNumber` (12 digits, no spaces; format only for display), `owner` (user `_id`), `balance`, `status` (`active` | `frozen` | `closed`), `cardLastFour` (4 digits; **assumption to confirm with the backend**), `createdAt`, `updatedAt`. The card number is not the account number. The full card number is never in account responses; it comes only from `POST /accounts/me/card-details`.
 - **Transaction:** `_id`, `referenceNumber`, `transactionType` (`cash_in` | `transfer`), `amount`, `sourceAccount` (empty for `cash_in`), `destinationAccount` (customer responses carry each account as `{ _id, accountNumber }`; this is an **assumption to confirm with the backend**, handled only in `src/utils/transactions.js`), `performedBy` (user `_id`), `status`, `flagReason` (`null` unless flagged or held for review), `createdAt`, `updatedAt`.
 - **Notification:** `_id`, `recipient` (user `_id`), `type` (`transaction` | `account` | `security` | `system`), `message`, `relatedTransaction` (optional), `isRead` (boolean), `createdAt`.
 - **AuditLog:** `_id`, `actor` (user `_id`), `action`, `targetType` (`User` | `BankAccount` | `Transaction`), `targetId`, `createdAt`.
@@ -105,6 +105,7 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 
 - `GET /accounts/me`
 - `GET /accounts/me/balance` → `{ accountNumber, balance, status }`
+- `POST /accounts/me/card-details` with `{ password }` → `data: { cardNumber (16 digits, no spaces), cardExpiry ("MM/YY"), cardCvc }`. Needs the customer's password and a verified account; wrong password → `{ success: false, message: "Incorrect password" }`. Assumed, to be confirmed. The dashboard never stores the result: it lives in the modal only. In mock mode the password is `Password123`.
 - `GET /accounts/lookup/:accountNumber` (checks a transfer recipient; assumed response `{ accountNumber, displayName, initials }`, to be confirmed)
 - `GET /accounts/:id` (customers: own account only)
 
@@ -112,7 +113,7 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 
 - `POST /transactions/cash-in`
 - `POST /transactions/transfer` with `{ recipientAccountNumber, amount, holdForReview? }`
-- `GET /transactions` with `?status=&type=&page=&limit=` (also `search`, `days`/`period`; values to be confirmed) → `data: { transactions, pagination: { page, limit, total, totalPages }, counts: { all, completed, pending, failed, cancelled, flagged }, summary: { moneyInThisMonth, moneyOutThisMonth } }`
+- `GET /transactions` with `?status=&type=&search=&page=&limit=` (`search` is **assumed, to be confirmed**: a single text term matched against the reference number, either account number, and the amount in pesos, e.g. `500` or `1,250.50`; the date filter is sent as `period` (`7d`, `30d`, `month`, `3m` or `custom`) plus `from` and `to` as `YYYY-MM-DD` days, both included, for `custom`; also **assumed, to be confirmed**) → `data: { transactions, pagination: { page, limit, total, totalPages }, counts: { all, completed, pending, failed, cancelled, flagged }, summary: { moneyInThisMonth, moneyOutThisMonth } }`. `counts` is **assumed, to be confirmed**: counted with `type`, `search` and the date filter applied but `status` ignored, so each status tab shows how many rows it would give. `summary` is always this month's, whatever the filters.
 - `GET /transactions/:id`
 - `PATCH /transactions/:id/cancel`
 

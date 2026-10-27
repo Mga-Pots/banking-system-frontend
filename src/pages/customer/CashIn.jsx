@@ -80,7 +80,6 @@ export default function CashIn() {
   const [result, setResult] = useState(null); // { amount, balance, referenceNumber }
   const [addingMore, setAddingMore] = useState(false);
   const inputRef = useRef(null);
-  const successRef = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -89,11 +88,6 @@ export default function CashIn() {
       active = false;
     };
   }, []);
-
-  // After a successful cash in, move focus to the result.
-  useEffect(() => {
-    if (result) successRef.current?.focus();
-  }, [result]);
 
   const { account } = load;
   const loading = load.status === "loading";
@@ -165,14 +159,6 @@ export default function CashIn() {
                 Try again
               </Button>
             </div>
-          ) : result ? (
-            <CashInSuccess
-              ref={successRef}
-              amount={result.amount}
-              balance={result.balance}
-              referenceNumber={result.referenceNumber}
-              onAddMore={addMore}
-            />
           ) : (
             <form onSubmit={submit} noValidate>
               {blocked && (
@@ -310,6 +296,14 @@ export default function CashIn() {
           </ul>
         </Card>
       </div>
+
+      {result && (
+        <CashInSuccess
+          amount={result.amount}
+          referenceNumber={result.referenceNumber}
+          onClose={addMore}
+        />
+      )}
     </div>
   );
 }

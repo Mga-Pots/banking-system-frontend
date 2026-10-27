@@ -159,3 +159,19 @@ export const SnowIcon = (props) => (
     <path d="M12 2v20M4.9 7l14.2 10M19.1 7 4.9 17" />
   </Icon>
 )
+export const SearchIcon = (props) => (
+  <Icon {...props}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="m20 20-3.5-3.5" />
+  </Icon>
+)
+export const ChevronLeftIcon = (props) => (
+  <Icon {...props}>
+    <path d="m15 6-6 6 6 6" />
+  </Icon>
+)
+export const ChevronRightIcon = (props) => (
+  <Icon {...props}>
+    <path d="m9 6 6 6-6 6" />
+  </Icon>
+)

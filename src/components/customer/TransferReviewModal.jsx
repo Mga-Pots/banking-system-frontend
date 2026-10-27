@@ -5,6 +5,7 @@ import Amount from '../ui/Amount'
 import { lookupAccount } from '../../api/accounts'
 import { transfer } from '../../api/transactions'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
+import { APPROVAL_THRESHOLD_TEXT, needsApproval } from '../../utils/transferRules'
 
 const messageOf = (err) => err.response?.data?.message ?? err.message
 
@@ -36,6 +37,7 @@ export default function TransferReviewModal({ recipientAccountNumber, amount, fr
   }
 
   const { recipient } = lookup
+  const approval = needsApproval(amount)
 
   return (
     <Modal title="Review transfer" onClose={onClose}>
@@ -61,6 +63,14 @@ export default function TransferReviewModal({ recipientAccountNumber, amount, fr
         </div>
       </dl>
 
+      <p
+        className={`mt-3 rounded-xl px-4 py-3 text-sm ${approval ? 'bg-status-pending font-semibold text-status-pending-text' : 'bg-field text-muted'}`}
+      >
+        {approval
+          ? `Transfers of ${APPROVAL_THRESHOLD_TEXT} or more need bank approval before they go through. You are charged now, and the recipient is credited once the bank approves it.`
+          : `This transfer goes through right away. Transfers of ${APPROVAL_THRESHOLD_TEXT} or more need bank approval first.`}
+      </p>
+
       {lookup.status === 'error' && (
         <p role="alert" className="mt-3 text-sm font-semibold text-error">
           {lookup.error}
@@ -82,7 +92,7 @@ export default function TransferReviewModal({ recipientAccountNumber, amount, fr
           disabled={lookup.status !== 'ready' || submit.sending}
           onClick={confirm}
         >
-          {submit.sending ? 'Sending…' : 'Confirm transfer'}
+          {submit.sending ? 'Sending…' : approval ? 'Proceed' : 'Confirm transfer'}
         </Button>
       </div>
     </Modal>

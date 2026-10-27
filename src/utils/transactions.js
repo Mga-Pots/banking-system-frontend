@@ -1,4 +1,4 @@
-import { formatAccountNumber } from './formatAccountNumber'
+import { formatAccountNumber, lastFour } from './formatAccountNumber'
 
 // In customer responses, sourceAccount and destinationAccount are populated as
 // { _id, accountNumber } (assumed; still to be confirmed with the backend).
@@ -13,13 +13,17 @@ export const isInactive = (tx) => tx.status === 'failed' || tx.status === 'cance
 
 // How a transaction reads from the logged-in customer's side. `names` maps an
 // account number to a person's masked name ("Pedro G."), when we know one.
+// `maskedTitle` is what to show instead when "hide details" is on: the same as
+// `title`, except that a title holding an account number only keeps its last four.
 export const describeTransaction = (tx, myAccountId, names = {}) => {
-  if (tx.transactionType === 'cash_in') return { direction: 'in', title: 'Cash in' }
+  if (tx.transactionType === 'cash_in') return { direction: 'in', title: 'Cash in', maskedTitle: 'Cash in' }
 
   const incoming = accountIdOf(tx.destinationAccount) === myAccountId
   const other = accountNumberOf(incoming ? tx.sourceAccount : tx.destinationAccount)
   const label = incoming ? 'From' : 'To'
   const fallback = incoming ? 'Transfer received' : 'Transfer sent'
   const who = other ? (names[other] ?? formatAccountNumber(other)) : null
-  return { direction: incoming ? 'in' : 'out', title: who ? `${label} ${who}` : fallback }
+  const title = who ? `${label} ${who}` : fallback
+  const maskedTitle = other && !names[other] ? `${label} •••• ${lastFour(other)}` : title
+  return { direction: incoming ? 'in' : 'out', title, maskedTitle }
 }

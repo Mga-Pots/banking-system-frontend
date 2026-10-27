@@ -1,13 +1,12 @@
-import Sensitive from '../ui/Sensitive'
-import CopyButton from '../ui/CopyButton'
 import { ArrowRightIcon } from '../ui/Icons'
 import AccountStatus from './AccountStatus'
-import { formatAccountNumber, lastFour } from '../../utils/formatAccountNumber'
+import { maskedCardNumber } from '../../utils/formatCardNumber'
 
-// The front of the account card: brand, status, account number, holder.
+// The front of the card: brand, status, masked card number, holder.
 // A frosted tile that sits on the deep-green balance banner. When the account isn't
-// active it loses most of its color.
-export default function AccountCard({ account, holder, onViewDetails, onCopied }) {
+// active it loses most of its color. The card number is always masked here and is not
+// covered by the hide-details eye: it only unlocks with the password in "View Details".
+export default function AccountCard({ account, holder, onViewDetails }) {
   const inactive = account.status !== 'active'
 
   return (
@@ -19,19 +18,13 @@ export default function AccountCard({ account, holder, onViewDetails, onCopied }
         <AccountStatus status={account.status} onDark />
       </div>
 
-      <div className="relative flex items-center gap-2">
-        <p className="text-xl font-semibold tracking-[0.06em] whitespace-nowrap tabular-nums">
-          <Sensitive mask={`•••• •••• ${lastFour(account.accountNumber)}`}>
-            {formatAccountNumber(account.accountNumber)}
-          </Sensitive>
-        </p>
-        <CopyButton
-          value={account.accountNumber}
-          label="Copy account number"
-          onCopied={onCopied}
-          className="text-white hover:bg-white/15"
-        />
-      </div>
+      <p className="relative text-xl font-semibold tracking-[0.06em] whitespace-nowrap tabular-nums">
+        {/* Sora draws the bullet as a square, so the mask uses the body face */}
+        <span aria-hidden="true" className="font-sans font-medium">
+          {maskedCardNumber(account.cardLastFour)}
+        </span>
+        <span className="sr-only">Card ending in {account.cardLastFour}</span>
+      </p>
 
       <div className="relative flex items-end justify-between gap-3 text-xs">
         <span className="font-semibold tracking-wider uppercase">{holder}</span>

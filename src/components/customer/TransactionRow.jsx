@@ -1,4 +1,5 @@
 import Amount from '../ui/Amount'
+import Sensitive from '../ui/Sensitive'
 import StatusBadge from '../ui/StatusBadge'
 import { ArrowDownLeftIcon, ArrowUpRightIcon, PlusIcon } from '../ui/Icons'
 import { describeTransaction, isInactive } from '../../utils/transactions'
@@ -7,7 +8,7 @@ import { formatTransactionDate } from '../../utils/formatDate'
 // One line in a transaction list. Opens the transaction's details when pressed.
 // `names` maps account numbers to people, so rows can say "To Pedro G.".
 export default function TransactionRow({ tx, myAccountId, names, onSelect }) {
-  const { direction, title } = describeTransaction(tx, myAccountId, names)
+  const { direction, title, maskedTitle } = describeTransaction(tx, myAccountId, names)
   const incoming = direction === 'in'
   const inactive = isInactive(tx)
   const amountTone = inactive ? 'text-muted line-through' : incoming ? 'text-wallet' : 'text-error'
@@ -28,7 +29,9 @@ export default function TransactionRow({ tx, myAccountId, names, onSelect }) {
       </span>
 
       <span className="min-w-0">
-        <span className="block truncate text-[15px] font-semibold text-text">{title}</span>
+        <span className="block truncate text-[15px] font-semibold text-text">
+          <Sensitive mask={maskedTitle}>{title}</Sensitive>
+        </span>
         <span className="block text-sm text-muted">
           {formatTransactionDate(tx.createdAt)}
           <span className="hidden sm:inline"> · {tx.referenceNumber}</span>

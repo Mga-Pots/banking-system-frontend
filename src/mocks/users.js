@@ -1,7 +1,8 @@
 import { scenario } from './scenario'
 
 // Mock users, one per role (plus more customers as transfer targets).
-// Any password is accepted in mock mode.
+// Any password is accepted at login in mock mode. The card-details call is stricter:
+// it needs MOCK_CARD_PASSWORD from src/api/accounts.js ("Password123").
 // Same shape as the backend's publicUser(): no passwordHash.
 // contactNumber is optional; users without one have no contactNumber field.
 // status: "active" | "deactivated" | "disabled" | "closed"

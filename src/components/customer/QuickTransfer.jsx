@@ -4,15 +4,12 @@ import Card from '../ui/Card'
 import Input from '../ui/Input'
 import Button from '../ui/Button'
 import Amount from '../ui/Amount'
-import { PlusIcon } from '../ui/Icons'
-import { formatAccountNumber, lastFour } from '../../utils/formatAccountNumber'
-import { firstNameOf } from '../../utils/names'
+import RecentRecipients from './RecentRecipients'
+import { formatAccountNumber } from '../../utils/formatAccountNumber'
 import { pesosToCentavos, sanitizeAmountInput } from '../../utils/parseAmount'
+import { APPROVAL_THRESHOLD_TEXT } from '../../utils/transferRules'
 
-const circle =
-  'flex size-12 cursor-pointer items-center justify-center rounded-full text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet'
-
-// Fill in a recipient and an amount, then press "Review transfer". It opens the
+// Fill in a recipient and an amount, then press "Transfer". It opens the
 // review step; nothing is sent from here. The first recent recipient starts filled in.
 export default function QuickTransfer({ recipients, available, frozen, onReview }) {
   const [accountNumber, setAccountNumber] = useState(() =>
@@ -31,7 +28,7 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
     const found = {}
     if (digits.length !== 12) found.accountNumber = 'Enter the 12-digit account number.'
     if (centavos === null || centavos <= 0) found.amount = 'Enter an amount greater than ₱0.00.'
-    else if (centavos > available) found.amount = 'That is more than your available balance.'
+    else if (centavos > available) found.amount = 'Your balance is insufficient.'
     setErrors(found)
 
     if (found.accountNumber) return accountRef.current?.focus()
@@ -60,42 +57,8 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
         </Link>
       </div>
 
-      <p id="recipients-label" className="mb-3 text-sm text-muted">
-        Recent recipients
-      </p>
-      <div role="group" aria-labelledby="recipients-label" className="mb-5 flex gap-3">
-        {recipients.map((recipient) => {
-          const selected = recipient.accountNumber === digits
-          return (
-            <div key={recipient.accountNumber} className="flex w-14 flex-col items-center gap-1">
-              <button
-                type="button"
-                onClick={() => chooseRecipient(recipient)}
-                aria-pressed={selected}
-                aria-label={`${recipient.displayName}, account ending ${lastFour(recipient.accountNumber)}`}
-                className={`${circle} ${selected ? 'bg-ink text-white' : 'bg-mint text-ink hover:bg-mint'}`}
-              >
-                {recipient.initials}
-              </button>
-              <span aria-hidden="true" className="max-w-full truncate text-xs text-muted">
-                {firstNameOf(recipient.displayName)}
-              </span>
-            </div>
-          )
-        })}
-        <div className="flex w-14 flex-col items-center gap-1">
-          <button
-            type="button"
-            onClick={startNew}
-            aria-label="Send to a new account"
-            className={`${circle} border-[1.5px] border-dashed border-wallet text-wallet hover:bg-mint`}
-          >
-            <PlusIcon size={18} />
-          </button>
-          <span aria-hidden="true" className="text-xs text-muted">
-            New
-          </span>
-        </div>
+      <div className="mb-5">
+        <RecentRecipients recipients={recipients} selected={digits} onChoose={chooseRecipient} onNew={startNew} />
       </div>
 
       <form onSubmit={submit} noValidate className="flex flex-col gap-4">
@@ -134,8 +97,12 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
             </>
           }
         />
+        <p className="text-xs text-muted">
+          Transfers under {APPROVAL_THRESHOLD_TEXT} go through right away. {APPROVAL_THRESHOLD_TEXT} or more needs
+          bank approval first.
+        </p>
         <Button type="submit" size="lg" disabled={frozen} className="w-full">
-          Review transfer
+          Transfer
         </Button>
       </form>
     </Card>

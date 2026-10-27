@@ -1,7 +1,7 @@
 import api from './axios'
 import { USE_MOCK, mockResponse, mockError, getMockUser } from './helpers'
 import { getMyTransactions } from './transactions'
-import { accounts } from '../mocks/accounts'
+import { accounts, cards } from '../mocks/accounts'
 import { transactions } from '../mocks/transactions'
 import { users } from '../mocks/users'
 import { initialsOf, maskedName } from '../utils/names'
@@ -30,6 +30,24 @@ export const getMyBalance = async () => {
     return mockResponse({ accountNumber, balance, status })
   }
   return (await api.get('/accounts/me/balance')).data
+}
+
+// The full card details, behind the customer's password. Returns
+// { cardNumber, cardExpiry, cardCvc }. Never cache the result: keep it only while it is on screen.
+// Assumed endpoint and fields, to be confirmed with the backend.
+// In mock mode the password is MOCK_CARD_PASSWORD (login accepts anything).
+export const MOCK_CARD_PASSWORD = 'Password123'
+
+export const getMyCardDetails = async (password) => {
+  if (USE_MOCK) {
+    const user = getMockUser()
+    const account = getMyMockAccount()
+    if (!user || !account) return mockError('Account not found')
+    if (!user.isVerified) return mockError('Your account must be verified to use the card')
+    if (password !== MOCK_CARD_PASSWORD) return mockError('Incorrect password')
+    return mockResponse({ ...cards[account._id] })
+  }
+  return (await api.post('/accounts/me/card-details', { password })).data
 }
 
 export const getAccountById = async (id) => {
