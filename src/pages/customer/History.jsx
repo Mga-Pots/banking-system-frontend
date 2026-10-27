@@ -188,7 +188,9 @@ export default function History() {
   const loading = !rangeError && result.key !== key;
   const transactions = history?.transactions ?? [];
   const pagination = history?.pagination;
-  const hasFilters = Boolean(status || type || q || period);
+  // "Custom range" with no dates picked yet doesn't filter anything
+  const dateActive = Boolean(period) && (period !== "custom" || Boolean(from || to));
+  const hasFilters = Boolean(status || type || q || dateActive);
   const frozen = account?.status === "frozen";
 
   const retry = () => {
@@ -238,15 +240,13 @@ export default function History() {
             : "Custom range"
       : labelOf(PERIODS, period);
   const activeFilters = [
-    period && periodLabel,
+    dateActive && periodLabel,
     type && labelOf(TYPES, type),
     status && labelOf(STATUSES, status),
     q && `“${q}”`,
   ].filter(Boolean);
 
   const firstLoad = !history || !account;
-  const firstShown = pagination ? (pagination.page - 1) * pagination.limit + 1 : 0;
-  const lastShown = pagination ? firstShown + transactions.length - 1 : 0;
   const announcement = loading
     ? ""
     : pagination?.total
@@ -278,7 +278,7 @@ export default function History() {
               id="history-search"
               type="search"
               label="Search"
-              placeholder="Reference, account number or amount"
+              placeholder="Reference, account or amount"
               autoComplete="off"
               prefix={<SearchIcon size={16} />}
               value={term}
@@ -357,6 +357,11 @@ export default function History() {
                 key={s.label}
                 type="button"
                 aria-pressed={active}
+                aria-label={
+                  counts
+                    ? `${s.label}, ${counts[s.count]} ${counts[s.count] === 1 ? "transaction" : "transactions"}`
+                    : undefined
+                }
                 onClick={() => update({ status: s.value, page: "" })}
                 className={`inline-flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet ${
                   active
@@ -375,18 +380,23 @@ export default function History() {
           })}
         </div>
 
-        {hasFilters && (
+        {pagination && pagination.total > 0 && (
           <div className="mt-3 flex items-center justify-between gap-3 text-sm">
             <p className="min-w-0 text-muted">
-              <span className="font-bold text-text">Filtered by</span> {activeFilters.join(" · ")}
+              <span className="font-bold text-text">
+                {pagination.total} {pagination.total === 1 ? "transaction" : "transactions"}
+              </span>
+              {activeFilters.length > 0 && ` · ${activeFilters.join(" · ")}`}
             </p>
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="-my-3 shrink-0 cursor-pointer py-3 font-bold text-wallet hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
-            >
-              Clear filters
-            </button>
+            {hasFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="-my-3 shrink-0 cursor-pointer py-3 font-bold text-wallet hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         )}
 
@@ -441,11 +451,8 @@ export default function History() {
           )}
         </div>
 
-        {pagination && pagination.total > 0 && (
-          <div className="mt-4 flex flex-col items-center gap-4 border-t border-divider pt-4 text-center">
-            <p className="text-sm text-muted">
-              Showing {firstShown}–{lastShown} of {pagination.total}
-            </p>
+        {pagination && pagination.totalPages > 1 && (
+          <div className="mt-4 flex justify-center border-t border-divider pt-4">
             <Pagination page={pagination.page} totalPages={pagination.totalPages} onChange={goToPage} />
           </div>
         )}

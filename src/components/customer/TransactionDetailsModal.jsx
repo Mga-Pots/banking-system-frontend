@@ -117,8 +117,7 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
             <p role={error ? 'alert' : undefined} className={`mb-3 text-sm ${error ? 'font-semibold text-error' : 'text-muted'}`}>
               {error || (
                 <>
-                  <Amount centavos={tx.amount} className="font-bold text-text" /> will be refunded to your
-                  account.
+                  Cancel this transfer? <Amount centavos={tx.amount} className="font-bold text-text" /> will be refunded.
                 </>
               )}
             </p>
@@ -126,7 +125,7 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
           {confirming ? (
             <div className="grid grid-cols-2 gap-3">
               <Button variant="danger" onClick={handleCancel} disabled={busy}>
-                {busy ? 'Cancelling...' : 'Yes, cancel'}
+                {busy ? 'Cancelling...' : 'Cancel transfer'}
               </Button>
               <Button variant="secondary" onClick={() => setConfirming(false)} disabled={busy}>
                 Keep transfer
