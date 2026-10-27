@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useMatch, useNavigate } from 'react-router-dom'
-import { BellIcon, ChevronDownIcon, LogOutIcon, UserIcon } from '../ui/Icons'
+import { ChevronDownIcon, LogOutIcon, UserIcon } from '../ui/Icons'
 import { useAuth } from '../../context/AuthContext'
-import { getMyNotifications } from '../../api/notifications'
 import { firstNameOf, initialsOf } from '../../utils/names'
+import NotificationBell from './NotificationBell'
 import { titleFor } from './pageTitles'
 
 // The bell and avatar are round, like every other button in the app.
@@ -26,21 +26,9 @@ export default function Header() {
   const { pathname } = useLocation()
   const onOverview = Boolean(useMatch('/customer')) // the greeting belongs to the overview only
   const title = titleFor(pathname)
-  const [unread, setUnread] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
   const triggerRef = useRef(null)
-
-  // Count unread notifications for the bell, and refresh when the page changes.
-  useEffect(() => {
-    let active = true
-    getMyNotifications()
-      .then((res) => active && setUnread(res.data.filter((n) => !n.isRead).length))
-      .catch(() => {})
-    return () => {
-      active = false
-    }
-  }, [pathname])
 
   // Close the account menu on Esc or a click outside it.
   useEffect(() => {
@@ -87,21 +75,7 @@ export default function Header() {
       </div>
 
       <div className="ml-auto flex items-center gap-3">
-        <Link
-          to="/customer/notifications"
-          className={`${circleBase} ${focusRing} bg-white hover:bg-mint`}
-          aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
-        >
-          <BellIcon size={20} />
-          {unread > 0 && (
-            <span
-              aria-hidden="true"
-              className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-wallet px-1 text-[11px] font-bold text-white"
-            >
-              {unread > 9 ? '9+' : unread}
-            </span>
-          )}
-        </Link>
+        <NotificationBell className={`${circleBase} ${focusRing} bg-white hover:bg-mint`} />
 
         <div ref={menuRef} className="relative">
           <button

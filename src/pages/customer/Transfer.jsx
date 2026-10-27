@@ -10,6 +10,7 @@ import AmountPresets from '../../components/customer/AmountPresets'
 import RecentRecipients from '../../components/customer/RecentRecipients'
 import TransferReviewModal from '../../components/customer/TransferReviewModal'
 import TransferSuccess from '../../components/customer/TransferSuccess'
+import { useNotifications } from '../../context/NotificationsContext'
 import { getMyAccount, getRecentRecipients, lookupAccount } from '../../api/accounts'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
 import { pesosToCentavos, sanitizeAmountInput } from '../../utils/parseAmount'
@@ -46,6 +47,7 @@ const blockedMessage = {
 
 export default function Transfer() {
   const { showToast } = useToast()
+  const { refresh: refreshNotifications } = useNotifications()
   const [load, setLoad] = useState({ status: 'loading', account: null, recipients: [], error: '' })
   const [accountNumber, setAccountNumber] = useState('')
   const [amountText, setAmountText] = useState('')
@@ -135,6 +137,7 @@ export default function Transfer() {
       () => {}, // the old list is fine
     )
     setResult({ transaction, balance, ...sentTo })
+    refreshNotifications()
     showToast(
       transaction.status === 'pending'
         ? 'Transfer submitted. It is waiting for bank approval.'

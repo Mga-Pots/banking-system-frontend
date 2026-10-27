@@ -3,8 +3,9 @@
 // browser tab; ?scenario=default turns it off again.
 //   frozen: the customer's account is frozen
 //   new:    a brand-new customer with no balance, transactions or notifications
+//   error:  the notifications calls fail (everything else works)
 const KEY = 'sinop.mockScenario'
-const KNOWN = ['frozen', 'new']
+const KNOWN = ['frozen', 'new', 'error']
 
 const readScenario = () => {
   try {

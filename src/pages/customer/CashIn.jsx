@@ -11,6 +11,7 @@ import { useToast } from "../../components/ui/Toast";
 import AmountPresets from "../../components/customer/AmountPresets";
 import CashInSuccess from "../../components/customer/CashInSuccess";
 import { useAuth } from "../../context/AuthContext";
+import { useNotifications } from "../../context/NotificationsContext";
 import { usePrivacy } from "../../context/PrivacyContext";
 import { getMyAccount } from "../../api/accounts";
 import { cashIn } from "../../api/transactions";
@@ -67,6 +68,7 @@ const blockedMessage = {
 
 export default function CashIn() {
   const { showToast } = useToast();
+  const { refresh: refreshNotifications } = useNotifications();
   const { user } = useAuth();
   const { hidden } = usePrivacy();
   const [load, setLoad] = useState({
@@ -122,6 +124,7 @@ export default function CashIn() {
         referenceNumber: res.data.referenceNumber,
       });
       showToast(`Naidagdag na. Ref ${res.data.referenceNumber}`);
+      refreshNotifications();
     } catch (err) {
       setSubmitError(messageOf(err));
     } finally {

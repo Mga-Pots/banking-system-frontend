@@ -6,6 +6,7 @@ import { MenuIcon } from '../components/ui/Icons'
 import { ToastProvider } from '../components/ui/Toast'
 import Header from '../components/customer/Header'
 import Sidebar from '../components/customer/Sidebar'
+import { NotificationsProvider } from '../context/NotificationsContext'
 import { PrivacyProvider } from '../context/PrivacyContext'
 
 // Customer shell: sidebar on the left (a menu button on small screens), the
@@ -16,6 +17,7 @@ export default function CustomerLayout() {
   return (
     <PrivacyProvider>
       <ToastProvider>
+        <NotificationsProvider>
         <div className="min-h-dvh bg-canvas text-text md:grid md:grid-cols-[232px_1fr]">
           <aside aria-label="Sidebar" className="sticky top-0 hidden h-dvh border-r border-divider bg-white md:block">
             <Sidebar />
@@ -49,6 +51,7 @@ export default function CustomerLayout() {
             <Sidebar onNavigate={() => setMenuOpen(false)} />
           </Modal>
         )}
+        </NotificationsProvider>
       </ToastProvider>
     </PrivacyProvider>
   )

@@ -11,6 +11,7 @@ import { useToast } from "../../components/ui/Toast";
 import Pagination from "../../components/customer/Pagination";
 import TransactionDetailsModal from "../../components/customer/TransactionDetailsModal";
 import TransactionRow from "../../components/customer/TransactionRow";
+import { useNotifications } from "../../context/NotificationsContext";
 import { getMyAccount, getRecentRecipients } from "../../api/accounts";
 import { cancelTransaction, getMyTransactions } from "../../api/transactions";
 import { formatLongDate } from "../../utils/formatDate";
@@ -51,6 +52,7 @@ const SEARCH_DELAY_MS = 300;
 
 export default function History() {
   const { showToast } = useToast();
+  const { refresh: refreshNotifications } = useNotifications();
   const [params, setParams] = useSearchParams();
 
   // Everything the customer chose lives in the URL, so refresh and back/forward work.
@@ -214,6 +216,7 @@ export default function History() {
     setOpenTx(null);
     showToast("Transfer cancelled. The money was refunded to your account.");
     setReloadKey((n) => n + 1);
+    refreshNotifications();
   };
 
   const error = meta.error || (!loading && result.error);
