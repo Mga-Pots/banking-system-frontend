@@ -25,6 +25,7 @@ export default function Header() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const onOverview = Boolean(useMatch('/customer')) // the greeting belongs to the overview only
+  const onNotifications = Boolean(useMatch('/customer/notifications')) // the bell shows as the current page
   const title = titleFor(pathname)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
@@ -75,7 +76,10 @@ export default function Header() {
       </div>
 
       <div className="ml-auto flex items-center gap-3">
-        <NotificationBell className={`${circleBase} ${focusRing} bg-white hover:bg-mint`} />
+        <NotificationBell
+          active={onNotifications}
+          className={`${circleBase} ${focusRing} ${onNotifications ? 'cursor-default! bg-mint' : 'bg-white hover:bg-mint'}`}
+        />
 
         <div ref={menuRef} className="relative">
           <button

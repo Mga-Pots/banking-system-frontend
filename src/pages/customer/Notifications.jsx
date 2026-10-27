@@ -84,9 +84,7 @@ export default function Notifications() {
   return (
     <div>
       {/* The page title ("Notifications") is shown in the header */}
-      <p className="text-[15px] text-muted">Updates about your account and transactions.</p>
-
-      <Card aria-busy={status === 'loading'} className="mt-6 p-0">
+      <Card aria-busy={status === 'loading'} className="p-0">
         {status === 'loading' && (
           <div className="space-y-3 p-6">
             <Skeleton className="h-16" />

@@ -13,8 +13,9 @@ const messageOf = (err) => err.response?.data?.message ?? err.message
 
 // The bell in the header: an unread badge, and a dropdown with the latest few
 // notifications. "See all" goes to the full page. Clicking one marks it read and, when it
-// has a transaction, opens the details.
-export default function NotificationBell({ className = '' }) {
+// has a transaction, opens the details. On the notifications page itself (`active`) the
+// bell is the current page: it shows highlighted and can't be pressed.
+export default function NotificationBell({ active = false, className = '' }) {
   const { status, items, error, unread, refresh, retry, markRead } = useNotifications()
   const { showToast } = useToast()
   const [open, setOpen] = useState(false)
@@ -72,8 +73,10 @@ export default function NotificationBell({ className = '' }) {
         ref={triggerRef}
         type="button"
         onClick={toggle}
-        aria-expanded={open}
-        aria-haspopup="true"
+        disabled={active}
+        aria-current={active ? 'page' : undefined}
+        aria-expanded={active ? undefined : open}
+        aria-haspopup={active ? undefined : 'true'}
         aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
         className={className}
       >
@@ -88,7 +91,7 @@ export default function NotificationBell({ className = '' }) {
         )}
       </button>
 
-      {open && (
+      {open && !active && (
         <div className="absolute right-0 z-20 mt-2 w-[min(380px,calc(100vw-2rem))] overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-divider">
           <p className="border-b border-divider px-4 py-3 text-sm font-bold text-text">Notifications</p>
 
