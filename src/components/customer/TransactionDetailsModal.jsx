@@ -60,11 +60,11 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
 
   return (
     <Modal title="Transaction details" onClose={onClose}>
-      <p className="text-[15px] font-semibold text-text">{maskedTitle}</p>
-      <p className={`mt-1 font-brand text-[32px] leading-tight font-bold ${amountTone}`}>
+      <p className="text-center text-[15px] font-semibold text-text">{maskedTitle}</p>
+      <p className={`mt-1 text-center font-brand text-[32px] leading-tight font-bold ${amountTone}`}>
         <Amount centavos={tx.amount} sign={inactive ? '' : incoming ? '+' : '−'} split />
       </p>
-      <div className="mt-2 mb-4">
+      <div className="mt-2 mb-4 flex justify-center">
         <StatusBadge status={tx.status} />
       </div>
 
