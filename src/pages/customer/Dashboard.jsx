@@ -27,7 +27,7 @@ import { formatAccountNumber, lastFour } from "../../utils/formatAccountNumber";
 import { useAuth } from "../../context/AuthContext";
 import { usePrivacy } from "../../context/PrivacyContext";
 import { getMyAccount, getRecentRecipients } from "../../api/accounts";
-import { getMyTransactions } from "../../api/transactions";
+import { cancelTransaction, getMyTransactions } from "../../api/transactions";
 
 const messageOf = (err) => err.response?.data?.message ?? err.message;
 const emptySummary = { moneyInThisMonth: 0, moneyOutThisMonth: 0 };
@@ -105,6 +105,15 @@ export default function CustomerDashboard() {
   const names = Object.fromEntries(
     recipients.map((r) => [r.accountNumber, r.displayName]),
   );
+
+  // Cancels a pending transfer from the details dialog, then refreshes the balance,
+  // the on-hold count and the list. A failure goes back to the dialog to show.
+  const handleCancel = async (tx) => {
+    await cancelTransaction(tx._id);
+    setOpenTx(null);
+    showToast("Transfer cancelled. The money was refunded to your account.");
+    load();
+  };
 
   const handleSent = (tx) => {
     setReview(null);
@@ -339,6 +348,7 @@ export default function CustomerDashboard() {
           myAccountId={account._id}
           names={names}
           onClose={() => setOpenTx(null)}
+          onCancel={handleCancel}
         />
       )}
       {detailsOpen && (
