@@ -2,40 +2,19 @@ import { useState } from 'react'
 import Modal from '../ui/Modal'
 import Amount from '../ui/Amount'
 import Button from '../ui/Button'
-import { EyeIcon, EyeOffIcon } from '../ui/Icons'
 import StatusBadge from '../ui/StatusBadge'
-import { formatAccountNumber, lastFour } from '../../utils/formatAccountNumber'
+import { lastFour } from '../../utils/formatAccountNumber'
 import { formatDateTime } from '../../utils/formatDate'
 import { accountIdOf, accountNumberOf, describeTransaction, isInactive } from '../../utils/transactions'
 
 const messageOf = (err) => err.response?.data?.message ?? err.message
 
-// The account number, or "Another account" when the response doesn't carry one.
-// Hidden down to the last four unless `shown`.
-const partyLabel = (account, shown) => {
+// Only the last four digits of an account number are shown here, always.
+// "Another account" when the response doesn't carry the number.
+const partyLabel = (account) => {
   if (!account) return null
   const number = accountNumberOf(account)
-  if (!number) return 'Another account'
-  return shown ? formatAccountNumber(number) : `•••• •••• ${lastFour(number)}`
-}
-
-// One account number with the eye that shows or hides every number in the dialog.
-function AccountNumber({ account, shown, onToggle }) {
-  const label = partyLabel(account, shown)
-  if (!accountNumberOf(account)) return label
-  return (
-    <span className="inline-flex items-center gap-1 tabular-nums">
-      {label}
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-label={shown ? 'Hide account numbers' : 'Show account numbers'}
-        className="relative -my-2 flex size-8 cursor-pointer items-center justify-center rounded-full text-muted transition before:absolute before:-inset-1.5 hover:bg-field focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
-      >
-        {shown ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
-      </button>
-    </span>
-  )
+  return number ? <span className="tabular-nums">•••• •••• {lastFour(number)}</span> : 'Another account'
 }
 
 function Row({ label, children }) {
@@ -51,13 +30,11 @@ function Row({ label, children }) {
 // transfer the customer sent can be cancelled here: `onCancel(tx)` should return a
 // promise that rejects with the error to show.
 export default function TransactionDetailsModal({ tx, myAccountId, names, onClose, onCancel }) {
-  const { direction, title, maskedTitle } = describeTransaction(tx, myAccountId, names)
+  const { direction, maskedTitle } = describeTransaction(tx, myAccountId, names)
   const incoming = direction === 'in'
   const inactive = isInactive(tx)
   const amountTone = inactive ? 'text-muted line-through' : incoming ? 'text-wallet' : 'text-error'
 
-  // Account numbers start hidden here, whatever the dashboard's "hide details" is set to.
-  const [showNumbers, setShowNumbers] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -68,8 +45,6 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
     tx.transactionType === 'transfer' &&
     tx.status === 'pending' &&
     accountIdOf(tx.sourceAccount) === myAccountId
-
-  const toggleNumbers = () => setShowNumbers((shown) => !shown)
 
   const handleCancel = async () => {
     if (busy) return
@@ -85,7 +60,7 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
 
   return (
     <Modal title="Transaction details" onClose={onClose}>
-      <p className="text-[15px] font-semibold text-text">{showNumbers ? title : maskedTitle}</p>
+      <p className="text-[15px] font-semibold text-text">{maskedTitle}</p>
       <p className={`mt-1 font-brand text-[32px] leading-tight font-bold ${amountTone}`}>
         <Amount centavos={tx.amount} sign={inactive ? '' : incoming ? '+' : '−'} split />
       </p>
@@ -99,11 +74,9 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
         <Row label="Date and time">{formatDateTime(tx.createdAt)}</Row>
         {tx.transactionType === 'transfer' && (
           <>
-            <Row label="From">
-              <AccountNumber account={tx.sourceAccount} shown={showNumbers} onToggle={toggleNumbers} />
-            </Row>
-            <Row label="To">
-              <AccountNumber account={tx.destinationAccount} shown={showNumbers} onToggle={toggleNumbers} />
+            {/* Only the other account: your own is always the other side of it */}
+            <Row label={incoming ? 'From' : 'To'}>
+              {partyLabel(incoming ? tx.sourceAccount : tx.destinationAccount)}
             </Row>
           </>
         )}
