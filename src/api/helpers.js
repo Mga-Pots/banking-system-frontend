@@ -9,6 +9,11 @@ const MOCK_DELAY_MS = 400
 export const mockResponse = (data, delay = MOCK_DELAY_MS) =>
   new Promise((resolve) => setTimeout(() => resolve({ success: true, data }), delay))
 
+// Resolves with { success: true, message } and no data, like the backend's mark-all,
+// delete and clear responses.
+export const mockMessage = (message, delay = MOCK_DELAY_MS) =>
+  new Promise((resolve) => setTimeout(() => resolve({ success: true, message }), delay))
+
 // Rejects like a failed axios call: err.response.data is { success: false, message }.
 export const mockError = (message, delay = MOCK_DELAY_MS) =>
   new Promise((_, reject) =>

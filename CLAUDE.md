@@ -38,7 +38,7 @@ src/
 
 - **Pages never call axios directly.** They call functions in `src/api/`. Only the api files know whether data is mocked or real.
 - **Mock switch:** every api function checks `import.meta.env.VITE_USE_MOCK`. If it's `"true"`, return mock data after a short delay; otherwise call the real endpoint. Mock responses must have exactly the same shape as real ones.
-- **Mock scenarios:** with `VITE_USE_MOCK=true`, open any page with `?scenario=frozen` (frozen account) or `?scenario=new` (brand-new customer) to see those states. `?scenario=default` turns it off.
+- **Mock scenarios:** with `VITE_USE_MOCK=true`, open any page with `?scenario=frozen` (frozen account) `?scenario=new` (brand-new customer) or `?scenario=error` (the notifications calls fail) to see those states. `?scenario=default` turns it off.
 - **Voice:** English is the main language. Light Taglish touches go only in warm moments (greeting, success messages, empty states, a few labels like "Net ngayong buwan"), with `lang="fil"` on the Filipino words. Errors, frozen or held states, and anything about money rules stay in plain English. Have a Filipino speaker check new strings.
 - **Page titles:** each customer page's title lives in `src/components/customer/pageTitles.js` and shows in the header's left slot (the overview shows the greeting there instead). Pages don't draw their own big heading; when you add a customer page, add its title to that file.
 - **Private values:** wrap balances, account numbers and totals in `<Sensitive>` so the dashboard's "hide details" eye button covers them all.
@@ -85,7 +85,7 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 - **User:** `_id`, `name`, `email`, `contactNumber` (optional; omitted when not set, never sent as `""`), `role` (`customer` | `staff` | `admin`), `status`, `isVerified` (boolean), `notificationPreferences` (`{ email: true, sms: false }`), `createdAt`, `updatedAt`. Never expose `passwordHash`.
 - **BankAccount:** `_id`, `accountNumber` (12 digits, no spaces; format only for display), `owner` (user `_id`), `balance`, `status` (`active` | `frozen` | `closed`), `cardLastFour` (4 digits; **assumption to confirm with the backend**), `createdAt`, `updatedAt`. The card number is not the account number. The full card number is never in account responses; it comes only from `POST /accounts/me/card-details`.
 - **Transaction:** `_id`, `referenceNumber`, `transactionType` (`cash_in` | `transfer`), `amount`, `sourceAccount` (empty for `cash_in`), `destinationAccount` (customer responses carry each account as `{ _id, accountNumber }`; this is an **assumption to confirm with the backend**, handled only in `src/utils/transactions.js`), `performedBy` (user `_id`), `status`, `flagReason` (`null` unless flagged or held for review), `createdAt`, `updatedAt`.
-- **Notification:** `_id`, `recipient` (user `_id`), `type` (`transaction` | `account` | `security` | `system`), `message`, `relatedTransaction` (optional), `isRead` (boolean), `createdAt`.
+- **Notification:** `_id`, `recipient` (user `_id`), `type` (`transaction` | `account` | `security` | `system`), `message` (free text; the UI never reads it for icons or behavior), `relatedTransaction` (transaction `_id`, unpopulated, or `null`), `isRead` (boolean), `createdAt`, `updatedAt`.
 - **AuditLog:** `_id`, `actor` (user `_id`), `action`, `targetType` (`User` | `BankAccount` | `Transaction`), `targetId`, `createdAt`.
 
 ## Backend endpoints (base: `VITE_API_URL`)
@@ -119,9 +119,10 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 
 **Notifications**
 
-- `GET /notifications`
+- `GET /notifications` → `data: [notifications]`, a plain array, newest first, no totals. Supports `?page=&limit=` (default 50, max 100); a full page means there may be more. The unread count is worked out on the client.
 - `PATCH /notifications/:id/read`, `PATCH /notifications/read-all`
 - `DELETE /notifications/:id`, `DELETE /notifications`
+- Mark one read returns the updated notification as `data`. Mark all, delete and clear return `{ success: true, message }` with no `data`.
 
 **Admin / staff**
 

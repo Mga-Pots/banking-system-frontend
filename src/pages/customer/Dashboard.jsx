@@ -25,6 +25,7 @@ import TransactionRow from "../../components/customer/TransactionRow";
 import TransferReviewModal from "../../components/customer/TransferReviewModal";
 import { formatAccountNumber, lastFour } from "../../utils/formatAccountNumber";
 import { useAuth } from "../../context/AuthContext";
+import { useNotifications } from "../../context/NotificationsContext";
 import { usePrivacy } from "../../context/PrivacyContext";
 import { getMyAccount, getRecentRecipients } from "../../api/accounts";
 import { cancelTransaction, getMyTransactions } from "../../api/transactions";
@@ -35,6 +36,7 @@ const emptySummary = { moneyInThisMonth: 0, moneyOutThisMonth: 0 };
 export default function CustomerDashboard() {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { refresh: refreshNotifications } = useNotifications();
   const { hidden, toggle } = usePrivacy();
 
   const [data, setData] = useState({
@@ -113,6 +115,7 @@ export default function CustomerDashboard() {
     setOpenTx(null);
     showToast("Transfer cancelled. The money was refunded to your account.");
     load();
+    refreshNotifications();
   };
 
   const handleSent = (tx) => {
@@ -124,6 +127,7 @@ export default function CustomerDashboard() {
         : `Naipadala na. Ref ${tx.referenceNumber}`,
     );
     load();
+    refreshNotifications();
   };
 
   return (
