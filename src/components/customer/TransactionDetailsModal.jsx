@@ -9,14 +9,6 @@ import { accountIdOf, accountNumberOf, describeTransaction, isInactive } from '.
 
 const messageOf = (err) => err.response?.data?.message ?? err.message
 
-// Only the last four digits of an account number are shown here, always.
-// "Another account" when the response doesn't carry the number.
-const partyLabel = (account) => {
-  if (!account) return null
-  const number = accountNumberOf(account)
-  return number ? <span className="tabular-nums">•••• •••• {lastFour(number)}</span> : 'Another account'
-}
-
 function Row({ label, children }) {
   return (
     <div className="flex items-start justify-between gap-4 border-t border-divider py-3 first:border-t-0">
@@ -38,6 +30,11 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+
+  // The other account's last four digits. When the title has no name to go by it
+  // already shows them, so the row only appears next to a name ("To Pedro G.").
+  const otherNumber = accountNumberOf(incoming ? tx.sourceAccount : tx.destinationAccount)
+  const showAccountRow = tx.transactionType === 'transfer' && Boolean(otherNumber && names?.[otherNumber])
 
   // Only the sender can cancel, and only a transfer that is still pending.
   const canCancel =
@@ -72,13 +69,10 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
         <Row label="Type">{tx.transactionType === 'cash_in' ? 'Cash in' : 'Transfer'}</Row>
         <Row label="Reference number">{tx.referenceNumber}</Row>
         <Row label="Date and time">{formatDateTime(tx.createdAt)}</Row>
-        {tx.transactionType === 'transfer' && (
-          <>
-            {/* Only the other account: your own is always the other side of it */}
-            <Row label={incoming ? 'From' : 'To'}>
-              {partyLabel(incoming ? tx.sourceAccount : tx.destinationAccount)}
-            </Row>
-          </>
+        {showAccountRow && (
+          <Row label="Account">
+            <span className="tabular-nums">•••• •••• {lastFour(otherNumber)}</span>
+          </Row>
         )}
         {tx.transactionType === 'cash_in' && <Row label="Funds">Simulated, no real money</Row>}
         {tx.flagReason && <Row label="Note">{tx.flagReason}</Row>}
