@@ -55,7 +55,6 @@ export default function Transfer() {
   const [result, setResult] = useState(null) // { transaction, recipientName, accountNumber, balance }
   const accountRef = useRef(null)
   const amountRef = useRef(null)
-  const successRef = useRef(null)
 
   useEffect(() => {
     let active = true
@@ -86,11 +85,6 @@ export default function Transfer() {
       clearTimeout(timer)
     }
   }, [digits, ownNumber])
-
-  // After a successful transfer, move focus to the result.
-  useEffect(() => {
-    if (result) successRef.current?.focus()
-  }, [result])
 
   const checking = digits.length === 12 && !ownNumber && lookup.digits !== digits
   const found = digits.length === 12 && lookup.digits === digits ? lookup : null
@@ -177,16 +171,7 @@ export default function Transfer() {
                 Try again
               </Button>
             </div>
-          ) : result ? (
-            <TransferSuccess
-              ref={successRef}
-              transaction={result.transaction}
-              recipientName={result.recipientName}
-              accountNumber={result.accountNumber}
-              balance={result.balance}
-              onSendAnother={sendAnother}
-            />
-          ) : noFunds ? (
+          ) : noFunds && !result ? (
             <div className="flex flex-col items-start gap-3 py-2">
               <p className="text-[15px] font-semibold text-text">You have no funds to send yet</p>
               <p className="text-sm text-muted">
@@ -327,6 +312,15 @@ export default function Transfer() {
           </ul>
         </Card>
       </div>
+
+      {result && (
+        <TransferSuccess
+          transaction={result.transaction}
+          recipientName={result.recipientName}
+          accountNumber={result.accountNumber}
+          onClose={sendAnother}
+        />
+      )}
 
       {review && (
         <TransferReviewModal
