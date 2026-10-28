@@ -270,6 +270,50 @@ export default function History() {
         </div>
       )}
 
+      <div
+        ref={chipsRef}
+        role="group"
+        aria-label="Filter by status"
+        className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 py-1"
+        style={
+          moreChips
+            ? {
+                maskImage: "linear-gradient(to right, black calc(100% - 2.5rem), transparent)",
+                WebkitMaskImage: "linear-gradient(to right, black calc(100% - 2.5rem), transparent)",
+              }
+            : undefined
+        }
+      >
+        {STATUSES.map((s) => {
+          const active = status === s.value;
+          return (
+            <button
+              key={s.label}
+              type="button"
+              aria-pressed={active}
+              aria-label={
+                counts
+                  ? `${s.label}, ${counts[s.count]} ${counts[s.count] === 1 ? "transaction" : "transactions"}`
+                  : undefined
+              }
+              onClick={() => update({ status: s.value, page: "" })}
+              className={`inline-flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet ${
+                active
+                  ? "bg-ink text-white"
+                  : "border-[1.5px] border-field-line bg-white text-ink hover:bg-field"
+              }`}
+            >
+              {s.label}
+              {counts && (
+                <span className={`tabular-nums ${active ? "text-white/70" : "text-muted"}`}>
+                  {counts[s.count]}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       <Card ref={listRef} aria-label="All transactions" aria-busy={loading} className="scroll-mt-4">
         <p role="status" className="sr-only">
           {announcement}
@@ -339,52 +383,8 @@ export default function History() {
           </div>
         )}
 
-        <div
-          ref={chipsRef}
-          role="group"
-          aria-label="Filter by status"
-          className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 py-1"
-          style={
-            moreChips
-              ? {
-                  maskImage: "linear-gradient(to right, black calc(100% - 2.5rem), transparent)",
-                  WebkitMaskImage: "linear-gradient(to right, black calc(100% - 2.5rem), transparent)",
-                }
-              : undefined
-          }
-        >
-          {STATUSES.map((s) => {
-            const active = status === s.value;
-            return (
-              <button
-                key={s.label}
-                type="button"
-                aria-pressed={active}
-                aria-label={
-                  counts
-                    ? `${s.label}, ${counts[s.count]} ${counts[s.count] === 1 ? "transaction" : "transactions"}`
-                    : undefined
-                }
-                onClick={() => update({ status: s.value, page: "" })}
-                className={`inline-flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet ${
-                  active
-                    ? "bg-ink text-white"
-                    : "border-[1.5px] border-field-line bg-white text-ink hover:bg-field"
-                }`}
-              >
-                {s.label}
-                {counts && (
-                  <span className={`tabular-nums ${active ? "text-white/70" : "text-muted"}`}>
-                    {counts[s.count]}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
         {pagination && pagination.total > 0 && (
-          <div className="mt-3 flex items-center justify-between gap-3 text-sm">
+          <div className="mt-4 flex items-center justify-between gap-3 text-sm">
             <p className="min-w-0 text-muted">
               <span className="font-bold text-text">
                 {pagination.total} {pagination.total === 1 ? "transaction" : "transactions"}
