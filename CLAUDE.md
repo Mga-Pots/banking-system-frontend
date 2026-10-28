@@ -61,8 +61,8 @@ src/
 | Role     | What they do                                                                                                                                                                            |
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | customer | View their account and balance, cash in, transfer, view transaction history, cancel own pending transactions, manage profile and notification preferences, view and clear notifications |
-| staff    | View customers and accounts, verify customers, view all transactions, flag or cancel suspicious transactions, freeze or reactivate accounts                                             |
-| admin    | Everything staff can view, plus create staff accounts, change user roles and status, view audit logs and notification logs                                                              |
+| staff    | Bank officers: view customers (balance on detail only), verify customers, freeze or reactivate bank accounts, approve, flag or cancel held transfers |
+| admin    | IT and people only (least privilege): create staff, activate/disable/close users, reset customer passwords, read-only audit log and notification metadata. No money data. Roles are fixed at creation. |
 
 ## Domain decisions
 
@@ -124,16 +124,23 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 - `DELETE /notifications/:id`, `DELETE /notifications`
 - Mark one read returns the updated notification as `data`. Mark all, delete and clear return `{ success: true, message }` with no `data`.
 
-**Admin / staff**
+**Admin** (`/api/admin/*`, admin only; see the Least-Privilege Alignment Guide)
 
-- `POST /admin/staff` (admin)
-- `GET /admin/users`, `GET /admin/users/:id` (admin, staff)
-- `PATCH /admin/users/:id/status` (admin)
-- `PATCH /admin/users/:id/role` (admin)
-- `PATCH /admin/users/:id/verify` (admin, staff)
-- `GET /admin/accounts`, `PATCH /admin/accounts/:id/status` (admin, staff)
-- `GET /admin/transactions`, `PATCH /admin/transactions/:id/status` (admin, staff)
-- `GET /admin/audit-logs`, `GET /admin/notifications` (admin)
+- `POST /admin/staff`
+- `GET /admin/users`, `GET /admin/users/:id` (identity and access fields only: no balances or account numbers)
+- `PATCH /admin/users/:id/status` (admins can't change their own status)
+- `PATCH /admin/users/:id/reset-password` (customers only; returns `{ temporaryPassword }` once and sets `mustChangePassword`)
+- `GET /admin/audit-logs` (read-only)
+- `GET /admin/notifications` (metadata only: recipient, type, isRead, createdAt; no message)
+- No role endpoint: roles are fixed at creation.
+
+**Staff** (`/api/staff/*`, staff only)
+
+- `GET /staff/customers`, `GET /staff/customers/:id` (balance on detail only), `PATCH /staff/customers/:id/verify`
+- `GET /staff/accounts`, `PATCH /staff/accounts/:id/status` with `{ status: "frozen" | "active", reason }` (reason required to freeze)
+- `GET /staff/transactions?status=`, `PATCH /staff/transactions/:id/status` with `{ status, reason }`: approve (`completed`) or cancel from pending/flagged transfers; flag from pending only (reason required)
+
+**Audit actions:** `staff.create`, `user.status_update`, `user.password_reset`, `user.verify`, `account.status_update`, `transaction.status_update`. In the frontend, admin calls live in `src/api/admin.js` and staff calls in `src/api/staff.js`.
 
 If an endpoint or field changes, update this file and tell the backend pair, so both repos stay in sync.
 

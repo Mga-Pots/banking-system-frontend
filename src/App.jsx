@@ -12,10 +12,12 @@ import Transfer from './pages/customer/Transfer'
 import History from './pages/customer/History'
 import Notifications from './pages/customer/Notifications'
 import Settings from './pages/customer/Settings'
-import ComingSoon from './pages/customer/ComingSoon'
 import StaffDashboard from './pages/staff/Dashboard'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsers from './pages/admin/Users'
+import AdminStaff from './pages/admin/Staff'
+import AdminAuditLog from './pages/admin/AuditLog'
+import AdminNotificationLog from './pages/admin/NotificationLog'
 
 function Home() {
   const { role } = useAuth()
@@ -54,10 +56,9 @@ export default function App() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<AdminUsers />} />
-              {/* Not built yet: placeholders so the sidebar links work */}
-              {['accounts', 'transactions', 'staff', 'audit-log', 'notification-log'].map((path) => (
-                <Route key={path} path={path} element={<ComingSoon />} />
-              ))}
+              <Route path="staff" element={<AdminStaff />} />
+              <Route path="audit-log" element={<AdminAuditLog />} />
+              <Route path="notification-log" element={<AdminNotificationLog />} />
               <Route path="*" element={<Navigate to="/admin" replace />} />
             </Route>
           </Route>

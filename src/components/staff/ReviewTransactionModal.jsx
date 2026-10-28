@@ -3,8 +3,8 @@ import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import Amount from '../ui/Amount'
 import StatusBadge from '../ui/StatusBadge'
-import DetailsList from './DetailsList'
-import { updateTransactionStatus } from '../../api/admin'
+import DetailsList from '../ui/DetailsList'
+import { updateTransactionStatus } from '../../api/staff'
 import { formatDateTime } from '../../utils/formatDate'
 
 // Details of a flagged or held transaction, with the option to cancel it.
@@ -17,7 +17,7 @@ export default function ReviewTransactionModal({ tx, fromName, toName, onClose, 
     setError('')
     setSaving(true)
     try {
-      await updateTransactionStatus(tx._id, 'cancelled')
+      await updateTransactionStatus(tx._id, { status: 'cancelled' })
       onCancelled(tx)
     } catch (err) {
       setError(err.response?.data?.message ?? err.message)

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
-import DetailsList from './DetailsList'
-import { verifyUser } from '../../api/admin'
+import DetailsList from '../ui/DetailsList'
+import { verifyCustomer } from '../../api/staff'
 import { formatLongDate } from '../../utils/formatDate'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
 
@@ -16,7 +16,7 @@ export default function VerifyCustomerModal({ customer, account, onClose, onVeri
     setError('')
     setSaving(true)
     try {
-      await verifyUser(customer._id)
+      await verifyCustomer(customer._id)
       onVerified(customer)
     } catch (err) {
       setError(err.response?.data?.message ?? err.message)

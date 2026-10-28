@@ -8,21 +8,21 @@ import { updateUserStatus } from '../../api/admin'
 const ACTIONS = {
   disable: {
     status: 'disabled',
-    title: (name) => `Disable ${name}’s account?`,
-    body: 'They won’t be able to log in until an admin turns the account back on. Nothing is deleted.',
+    title: () => 'Disable this account?',
+    body: (name) => `${name} won’t be able to log in until an admin turns the account back on. Nothing is deleted.`,
     button: 'Disable account',
     variant: 'danger',
   },
   enable: {
     status: 'active',
-    title: (name) => `Turn ${name}’s account back on?`,
-    body: 'They’ll be able to log in again right away.',
+    title: () => 'Turn this account back on?',
+    body: (name) => `${name} will be able to log in again right away.`,
     button: 'Turn back on',
     variant: 'primary',
   },
   close: {
     status: 'closed',
-    title: (name) => `Close ${name}’s account permanently?`,
+    title: () => 'Close this account permanently?',
     body: null,
     button: 'Close permanently',
     variant: 'danger',
@@ -55,11 +55,11 @@ export default function UserStatusModal({ user, action, onClose, onSaved }) {
   return (
     <Modal title={a.title(user.name)} onClose={onClose}>
       <div className="flex flex-col gap-5">
-        {a.body && <p className="-mt-2 text-sm text-label">{a.body}</p>}
+        {a.body && <p className="-mt-2 text-sm text-label">{a.body(user.name)}</p>}
         {a.confirmWord && (
           <>
             <p className="-mt-2 rounded-xl bg-status-failed px-4 py-3.5 text-sm font-semibold text-status-failed-text">
-              This can’t be undone. Their records and transactions are kept, but the account can never be used again.
+              This can’t be undone. {user.name}’s records are kept, but the account can never be used again.
             </p>
             <Input
               id="close-confirm"

@@ -1,21 +1,13 @@
 import { Link, NavLink } from 'react-router-dom'
 import Logo from '../auth/Logo'
-import { BellIcon, CardIcon, ClipboardIcon, GridIcon, ListIcon, UserPlusIcon, UsersIcon } from '../ui/Icons'
+import { BellIcon, ClipboardIcon, GridIcon, ShieldIcon, UserPlusIcon, UsersIcon } from '../ui/Icons'
 
-// Same look as the customer sidebar. The second group is for admins only
-// (staff will get the first group without it).
+// Admin = IT and people only. Bank accounts and transactions are staff pages.
 const groups = [
   {
     links: [
       { to: '/admin', label: 'Overview', icon: GridIcon, end: true },
       { to: '/admin/users', label: 'Users', icon: UsersIcon },
-      { to: '/admin/accounts', label: 'Accounts', icon: CardIcon },
-      { to: '/admin/transactions', label: 'Transactions', icon: ListIcon },
-    ],
-  },
-  {
-    title: 'Admin only',
-    links: [
       { to: '/admin/staff', label: 'Staff', icon: UserPlusIcon },
       { to: '/admin/audit-log', label: 'Audit log', icon: ClipboardIcon },
       { to: '/admin/notification-log', label: 'Notification log', icon: BellIcon },
@@ -69,6 +61,14 @@ export default function AdminSidebar({ onNavigate }) {
           </div>
         ))}
       </nav>
+
+      <div className="mt-auto flex gap-2.5 rounded-2xl bg-mint p-3.5">
+        <ShieldIcon size={20} className="mt-0.5 shrink-0 text-ink" />
+        <p className="text-xs text-label">
+          <span className="block text-sm font-bold text-ink">Admin · IT &amp; people</span>
+          No access to money, accounts, or transactions
+        </p>
+      </div>
     </div>
   )
 }
