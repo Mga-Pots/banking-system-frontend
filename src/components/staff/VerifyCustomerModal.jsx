@@ -6,8 +6,9 @@ import { verifyCustomer } from '../../api/staff'
 import { formatLongDate } from '../../utils/formatDate'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
 
-// Confirms an ID check before marking a customer as verified.
-export default function VerifyCustomerModal({ customer, account, onClose, onVerified }) {
+// Confirms an ID check before marking a customer as verified. Only staff verify.
+// `customer` is a staff customer (see src/api/staff.js), with its `account`.
+export default function VerifyCustomerModal({ customer, onClose, onVerified }) {
   const [checked, setChecked] = useState(false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -16,8 +17,8 @@ export default function VerifyCustomerModal({ customer, account, onClose, onVeri
     setError('')
     setSaving(true)
     try {
-      await verifyCustomer(customer._id)
-      onVerified(customer)
+      const res = await verifyCustomer(customer._id)
+      onVerified(res.data)
     } catch (err) {
       setError(err.response?.data?.message ?? err.message)
       setSaving(false)
@@ -32,7 +33,7 @@ export default function VerifyCustomerModal({ customer, account, onClose, onVeri
           rows={[
             ['Email', customer.email],
             ['Mobile', customer.contactNumber || 'Not given'],
-            ['Account', account ? formatAccountNumber(account.accountNumber) : 'None'],
+            ['Account', customer.account ? formatAccountNumber(customer.account.accountNumber) : 'None'],
             ['Joined', formatLongDate(customer.createdAt)],
           ]}
         />

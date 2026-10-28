@@ -1,0 +1,263 @@
+import { useCallback, useEffect, useState } from 'react'
+import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import Amount from '../../components/ui/Amount'
+import Skeleton from '../../components/ui/Skeleton'
+import StatusBadge from '../../components/ui/StatusBadge'
+import { useToast } from '../../components/ui/Toast'
+import { usePrivacy } from '../../context/PrivacyContext'
+import FilterSelect from '../../components/staff/FilterSelect'
+import ReviewTransactionModal from '../../components/staff/ReviewTransactionModal'
+import { reviewedMessage } from '../../components/staff/reviewMessages'
+import { getAccounts, getCustomers, getTransactions, reviewActionsFor } from '../../api/staff'
+import { accountIdOf, accountNumberOf } from '../../utils/transactions'
+import { formatAccountNumber, maskAccountNumber } from '../../utils/formatAccountNumber'
+import { formatTransactionDate } from '../../utils/formatDate'
+
+const PAGE_SIZE = 10
+const messageOf = (err) => err.response?.data?.message ?? err.message
+
+// "Needs review" is what staff open the page for: transfers still pending or flagged.
+const needsReview = (tx) => reviewActionsFor(tx).length > 0
+
+const TABS = [
+  ['review', 'Needs review'],
+  ['all', 'All'],
+  ['completed', 'Completed'],
+  ['pending', 'Pending'],
+  ['flagged', 'Flagged'],
+  ['failed', 'Failed'],
+  ['cancelled', 'Cancelled'],
+]
+
+const inTab = (tx, tab) => (tab === 'review' ? needsReview(tx) : tab === 'all' || tx.status === tab)
+
+// Every transaction, newest first. Staff approve, flag or cancel held transfers here.
+export default function StaffTransactions() {
+  const { showToast } = useToast()
+  const { hidden } = usePrivacy()
+  const [data, setData] = useState({ status: 'loading', transactions: [], accounts: [], customers: [], error: '' })
+  const [tab, setTab] = useState('review')
+  const [type, setType] = useState('any')
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(0)
+  const [reviewing, setReviewing] = useState(null) // the transaction open in the dialog
+
+  const load = useCallback(async () => {
+    try {
+      const [transactions, accounts, customers] = await Promise.all([getTransactions(), getAccounts(), getCustomers()])
+      setData({
+        status: 'ready',
+        transactions: transactions.data,
+        accounts: accounts.data,
+        customers: customers.data,
+        error: '',
+      })
+    } catch (err) {
+      setData((current) => ({ ...current, status: 'error', error: messageOf(err) }))
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // Any filter change goes back to the first page
+  const filterBy = (setter) => (value) => {
+    setter(value)
+    setPage(0)
+  }
+
+  const { transactions, accounts, customers } = data
+  const loading = data.status === 'loading'
+
+  // The owner's name for a transaction's account, found through the accounts list.
+  const nameFor = (account) => {
+    const owner = accounts.find((a) => a._id === accountIdOf(account))?.owner
+    return customers.find((c) => c._id === owner)?.name ?? null
+  }
+  const numberFor = (account) => {
+    const number = accountNumberOf(account)
+    if (!number) return null
+    return hidden ? maskAccountNumber(number) : formatAccountNumber(number)
+  }
+  // "Juan Dela Cruz · 0012 3456 7890"
+  const partyOf = (account) => [nameFor(account), numberFor(account)].filter(Boolean).join(' · ') || 'Unknown'
+
+  const count = (value) => transactions.filter((tx) => inTab(tx, value)).length
+  const query = search.trim().toLowerCase()
+  const digits = query.replace(/\s/g, '')
+
+  const filtered = transactions
+    .filter((tx) => inTab(tx, tab))
+    .filter((tx) => type === 'any' || tx.transactionType === type)
+    .filter((tx) => {
+      if (!query) return true
+      const sides = [tx.sourceAccount, tx.destinationAccount]
+      return (
+        tx.referenceNumber.toLowerCase().includes(query) ||
+        sides.some((side) => (digits && (accountNumberOf(side) ?? '').includes(digits)) || (nameFor(side) ?? '').toLowerCase().includes(query))
+      )
+    })
+
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const current = Math.min(page, pages - 1)
+  const shown = filtered.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE)
+
+  if (data.status === 'error' && transactions.length === 0) {
+    return (
+      <Card role="alert">
+        <h2 className="text-xl font-bold text-text">We couldn’t load transactions</h2>
+        <p className="mt-1 mb-4 text-muted">{data.error}</p>
+        <Button onClick={load}>Try again</Button>
+      </Card>
+    )
+  }
+
+  return (
+    <>
+      <div role="group" aria-label="Show" className="mb-6 flex flex-wrap gap-2">
+        {TABS.map(([value, label]) => {
+          const on = tab === value
+          return (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={on}
+              onClick={() => filterBy(setTab)(value)}
+              className={`inline-flex h-11 cursor-pointer items-center gap-2 rounded-full px-[18px] text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet ${
+                on ? 'bg-ink text-white' : 'border-[1.5px] border-field-line bg-white text-ink hover:bg-field'
+              }`}
+            >
+              {label}
+              <span className={`text-[13px] font-semibold ${on ? 'text-white/75' : 'text-muted'}`}>
+                {loading ? '–' : count(value)}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      <Card>
+        <div className="flex flex-col gap-3 pb-5 sm:flex-row">
+          <div className="flex-1">
+            <label htmlFor="transaction-search" className="sr-only">
+              Search transactions
+            </label>
+            <input
+              id="transaction-search"
+              type="search"
+              value={search}
+              onChange={(e) => filterBy(setSearch)(e.target.value)}
+              placeholder="Search reference, account number or name"
+              className="h-12 w-full min-w-0 rounded-xl border-[1.5px] border-field-line bg-field px-4 text-[15px] text-text outline-none transition placeholder:text-placeholder focus:border-wallet focus:ring-4 focus:ring-wallet/20"
+            />
+          </div>
+          <FilterSelect id="type-filter" label="Type" value={type} onChange={filterBy(setType)}>
+            <option value="any">Type: Any</option>
+            <option value="transfer">Transfers</option>
+            <option value="cash_in">Cash ins</option>
+          </FilterSelect>
+        </div>
+
+        {loading ? (
+          <Skeleton className="h-72" />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] border-collapse text-left">
+              <thead>
+                <tr className="border-t border-divider text-xs font-bold tracking-wider text-muted uppercase">
+                  <th scope="col" className="w-[150px] py-3 pr-4 font-bold">Date</th>
+                  <th scope="col" className="w-[90px] py-3 pr-4 font-bold">Type</th>
+                  <th scope="col" className="py-3 pr-4 font-bold">From → To</th>
+                  <th scope="col" className="w-[140px] py-3 pr-4 text-right font-bold">Amount</th>
+                  <th scope="col" className="w-[120px] py-3 pr-4 font-bold">Status</th>
+                  <th scope="col" className="w-[100px] py-3 font-bold">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {shown.length === 0 && (
+                  <tr className="border-t border-divider">
+                    <td colSpan={6} className="py-10 text-center text-muted">
+                      {tab === 'review' && !query && type === 'any'
+                        ? 'Nothing needs review right now.'
+                        : 'No transactions match these filters.'}
+                    </td>
+                  </tr>
+                )}
+                {shown.map((tx) => {
+                  const isTransfer = tx.transactionType === 'transfer'
+                  return (
+                    <tr key={tx._id} className="border-t border-divider">
+                      <td className="py-3.5 pr-4">
+                        <p className="text-sm text-text">{formatTransactionDate(tx.createdAt)}</p>
+                        <p className="text-xs text-muted tabular-nums">{tx.referenceNumber}</p>
+                      </td>
+                      <td className="py-3.5 pr-4 text-sm font-semibold text-label">{isTransfer ? 'Transfer' : 'Cash in'}</td>
+                      <td className="py-3.5 pr-4 text-sm">
+                        {isTransfer ? (
+                          <>
+                            <p className="truncate text-text">{partyOf(tx.sourceAccount)}</p>
+                            <p className="truncate text-muted">→ {partyOf(tx.destinationAccount)}</p>
+                          </>
+                        ) : (
+                          <p className="truncate text-text">→ {partyOf(tx.destinationAccount)}</p>
+                        )}
+                        {tx.flagReason && <p className="mt-0.5 truncate text-xs text-muted">{tx.flagReason}</p>}
+                      </td>
+                      <td className="py-3.5 pr-4 text-right text-[15px] font-semibold text-text">
+                        <Amount centavos={tx.amount} sensitive />
+                      </td>
+                      <td className="py-3.5 pr-4">
+                        <StatusBadge status={tx.status} />
+                      </td>
+                      <td className="py-3.5">
+                        <div className="flex justify-end">
+                          <Button variant={needsReview(tx) ? 'primary' : 'secondary'} onClick={() => setReviewing(tx)}>
+                            {needsReview(tx) ? 'Review' : 'View'}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-divider pt-5">
+          <p className="text-sm text-muted">
+            {filtered.length === 0
+              ? 'Showing 0'
+              : `Showing ${current * PAGE_SIZE + 1}–${current * PAGE_SIZE + shown.length} of ${filtered.length}`}
+          </p>
+          <div className="flex gap-2">
+            <Button variant="secondary" disabled={current === 0} onClick={() => setPage(current - 1)}>
+              Previous
+            </Button>
+            <Button variant="secondary" disabled={current >= pages - 1} onClick={() => setPage(current + 1)}>
+              Next
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {reviewing && (
+        <ReviewTransactionModal
+          tx={reviewing}
+          from={partyOf(reviewing.sourceAccount)}
+          to={partyOf(reviewing.destinationAccount)}
+          onClose={() => setReviewing(null)}
+          onReviewed={(tx) => {
+            setReviewing(null)
+            showToast(reviewedMessage(tx))
+            load()
+          }}
+        />
+      )}
+    </>
+  )
+}

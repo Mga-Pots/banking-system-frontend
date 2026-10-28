@@ -61,8 +61,8 @@ src/
 | Role     | What they do                                                                                                                                                                            |
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | customer | View their account and balance, cash in, transfer, view transaction history, cancel own pending transactions, manage profile and notification preferences, view and clear notifications |
-| staff    | Bank officers: view customers (balance on detail only), verify customers, freeze or reactivate bank accounts, approve, flag or cancel held transfers |
-| admin    | IT and people only (least privilege): create staff, activate/disable/close users, reset customer passwords, read-only audit log and notification metadata. No money data. Roles are fixed at creation. |
+| staff    | Bank officers: view customers (balance on detail only), verify customers, freeze, reactivate or close bank accounts (closing also closes the customer's login), approve, flag or cancel held transfers |
+| admin    | IT and people only (least privilege): create and close staff accounts, reset customer passwords, read-only audit log and notification metadata. No money data, and no disabling users. Roles are fixed at creation. |
 
 ## Domain decisions
 
@@ -75,7 +75,7 @@ src/
   - Customers don't see incoming transfers until they're `completed`.
 - **Transaction statuses:** `pending`, `completed`, `failed`, `cancelled`, `flagged`.
 - **Account statuses:** `active`, `frozen`, `closed`.
-- **User statuses:** `active`, `deactivated` (by the customer), `disabled` or `closed` (by an admin).
+- **User statuses:** `active`, `deactivated` (by the customer), `closed` (a staff user closed by an admin, or a customer closed by staff when their bank account is closed). Nobody disables or re-enables users; `disabled` is no longer used.
 - **Cancelled transactions are never deleted.** They stay on record with status `cancelled`.
 
 ## Data shapes (from the backend's Mongoose schemas)
@@ -128,19 +128,23 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 
 - `POST /admin/staff`
 - `GET /admin/users`, `GET /admin/users/:id` (identity and access fields only: no balances or account numbers)
-- `PATCH /admin/users/:id/status` (admins can't change their own status)
+- `PATCH /admin/users/:id/status` with `{ status: "closed" }` only, and only for staff users (admins can't close themselves; customers are closed by staff, through their bank account)
 - `PATCH /admin/users/:id/reset-password` (customers only; returns `{ temporaryPassword }` once and sets `mustChangePassword`)
 - `GET /admin/audit-logs` (read-only)
 - `GET /admin/notifications` (metadata only: recipient, type, isRead, createdAt; no message)
 - No role endpoint: roles are fixed at creation.
 
-**Staff** (`/api/staff/*`, staff only)
-
-- `GET /staff/customers`, `GET /staff/customers/:id` (balance on detail only), `PATCH /staff/customers/:id/verify`
-- `GET /staff/accounts`, `PATCH /staff/accounts/:id/status` with `{ status: "frozen" | "active", reason }` (reason required to freeze)
-- `GET /staff/transactions?status=`, `PATCH /staff/transactions/:id/status` with `{ status, reason }`: approve (`completed`) or cancel from pending/flagged transfers; flag from pending only (reason required)
-
 **Audit actions:** `staff.create`, `user.status_update`, `user.password_reset`, `user.verify`, `account.status_update`, `transaction.status_update`. In the frontend, admin calls live in `src/api/admin.js` and staff calls in `src/api/staff.js`.
+
+**Staff** (staff only, see `docs/least-privilege-guide.md`; all **assumed, to be confirmed** with the backend; called from `src/api/staff.js`)
+
+- `GET /staff/customers` → `data: [customers]`, customers only, newest first. Each is `{ _id, name, email, contactNumber?, status, isVerified, createdAt, updatedAt, account: { _id, accountNumber, status } }` (no balance, role or preferences).
+- `GET /staff/customers/:id` → the same customer, with `account.balance` added.
+- `PATCH /staff/customers/:id/verify` (no body; active, unverified customers only) → the updated customer.
+- `GET /staff/accounts` → `data: [accounts]`, newest first: `{ _id, accountNumber, owner, balance, status, createdAt, updatedAt }` (no card fields).
+- `PATCH /staff/accounts/:id/status` with `{ status: "frozen" | "active" | "closed", reason }` (`reason` required to freeze or close; a closed account can't change) → the updated account. Closing is permanent and also closes the owner's user; it's refused unless the balance is 0 and no transfer is `pending` or `flagged` in or out of the account. Only staff close customers; admin's user status endpoint can't close a customer.
+- `GET /staff/transactions` → `data: [transactions]`, newest first, each account as `{ _id, accountNumber }`.
+- `PATCH /staff/transactions/:id/status` with `{ status, reason? }` → the updated transaction. Transfers only: approve (`completed`) or cancel (`cancelled`) from `pending` or `flagged`; flag (`flagged`, `reason` required) from `pending` only. Approving credits the recipient; cancelling refunds the sender.
 
 If an endpoint or field changes, update this file and tell the backend pair, so both repos stay in sync.
 
