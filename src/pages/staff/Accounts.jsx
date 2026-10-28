@@ -10,7 +10,7 @@ import { useToast } from '../../components/ui/Toast'
 import AccountStatus from '../../components/customer/AccountStatus'
 import AccountStatusModal from '../../components/staff/AccountStatusModal'
 import CloseAccountModal from '../../components/staff/CloseAccountModal'
-import { getAccounts, getCustomers } from '../../api/staff'
+import { getAccounts } from '../../api/staff'
 import { formatAccountNumber, maskAccountNumber } from '../../utils/formatAccountNumber'
 import { initialsOf } from '../../utils/names'
 import { LOADING, keepData, retrying, settle } from '../../utils/loadResults'
@@ -29,8 +29,7 @@ const TABS = [
 // the customer's login too). Closed accounts can't change.
 export default function StaffAccounts() {
   const { showToast } = useToast()
-  // Customers only give the owners' names, so the list still shows without them.
-  const [sections, setSections] = useState({ accounts: LOADING, customers: LOADING })
+  const [sections, setSections] = useState({ accounts: LOADING })
   const [tab, setTab] = useState('all')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
@@ -39,11 +38,8 @@ export default function StaffAccounts() {
 
   const load = useCallback(
     () =>
-      settle([getAccounts(), getCustomers()]).then(([accounts, customers]) =>
-        setSections((current) => ({
-          accounts: keepData(current.accounts, accounts),
-          customers: keepData(current.customers, customers),
-        })),
+      settle([getAccounts()]).then(([accounts]) =>
+        setSections((current) => ({ accounts: keepData(current.accounts, accounts) })),
       ),
     [],
   )
@@ -64,9 +60,7 @@ export default function StaffAccounts() {
   }
 
   const accounts = sections.accounts.data ?? []
-  const customers = sections.customers.data ?? []
   const loading = sections.accounts.status === 'loading'
-  const ownerOf = (account) => customers.find((c) => c._id === account.owner)
   const count = (status) => accounts.filter((a) => status === 'all' || a.status === status).length
   const query = search.trim().toLowerCase()
   const digits = query.replace(/\s/g, '')
@@ -75,7 +69,7 @@ export default function StaffAccounts() {
     .filter((a) => tab === 'all' || a.status === tab)
     .filter((a) => {
       if (!query) return true
-      const owner = ownerOf(a)
+      const owner = a.owner
       return (
         a.accountNumber.includes(digits) ||
         (owner?.name ?? '').toLowerCase().includes(query) ||
@@ -130,15 +124,6 @@ export default function StaffAccounts() {
           />
         </div>
 
-        {sections.customers.status === 'error' && !sections.customers.data && (
-          <ErrorState
-            compact
-            title="Owner names didn’t load, so rows show “Unknown owner”."
-            message={sections.customers.error}
-            onRetry={retry}
-            className="mb-5 rounded-xl border border-divider p-4"
-          />
-        )}
 
         {loading ? (
           <Skeleton className="h-72" />
@@ -165,7 +150,7 @@ export default function StaffAccounts() {
                   </tr>
                 )}
                 {shown.map((a) => {
-                  const owner = ownerOf(a)
+                  const owner = a.owner
                   return (
                     <tr key={a._id} className="border-t border-divider">
                       <td className="py-3.5 pr-4">
@@ -185,7 +170,7 @@ export default function StaffAccounts() {
                                 {owner.name}
                               </Link>
                             ) : (
-                              <p className="text-[15px] font-semibold text-muted">Unknown owner</p>
+                              <p className="text-[15px] font-semibold text-muted">Owner not found</p>
                             )}
                             {owner && <p className="truncate text-sm text-muted">{owner.email}</p>}
                           </div>
@@ -201,15 +186,20 @@ export default function StaffAccounts() {
                         <Amount centavos={a.balance} sensitive />
                       </td>
                       <td className="py-3.5">
-                        <div className="flex justify-end gap-2">
+                        {/* No owner means no customer to act for, so nothing here can be changed */}
+                        <div className="flex justify-end gap-2" title={owner ? undefined : 'This account has no owner on record'}>
                           {a.status === 'active' && (
-                            <Button variant="secondary" onClick={() => setChanging(a)}>
+                            <Button variant="secondary" disabled={!owner} onClick={() => setChanging(a)}>
                               Freeze
                             </Button>
                           )}
-                          {a.status === 'frozen' && <Button onClick={() => setChanging(a)}>Reactivate</Button>}
+                          {a.status === 'frozen' && (
+                            <Button disabled={!owner} onClick={() => setChanging(a)}>
+                              Reactivate
+                            </Button>
+                          )}
                           {a.status !== 'closed' && (
-                            <Button variant="secondary" onClick={() => setClosing(a)}>
+                            <Button variant="secondary" disabled={!owner} onClick={() => setClosing(a)}>
                               Close
                             </Button>
                           )}
@@ -243,7 +233,7 @@ export default function StaffAccounts() {
       {changing && (
         <AccountStatusModal
           account={changing}
-          ownerName={ownerOf(changing)?.name}
+          ownerName={changing.owner?.name}
           onClose={() => setChanging(null)}
           onSaved={(a) => {
             setChanging(null)
@@ -255,7 +245,7 @@ export default function StaffAccounts() {
       {closing && (
         <CloseAccountModal
           account={closing}
-          ownerName={ownerOf(closing)?.name}
+          ownerName={closing.owner?.name}
           onClose={() => setClosing(null)}
           onClosed={() => {
             setClosing(null)

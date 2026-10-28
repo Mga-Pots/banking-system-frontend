@@ -15,8 +15,9 @@ import { formatPeso } from '../utils/formatPeso'
 // Response shapes are assumed, to be confirmed with the backend:
 // - customer: the user's identity fields plus account: { _id, accountNumber, status }
 //   (the detail adds account.balance)
-// - accounts and transactions: plain arrays, newest first. Transactions carry each
-//   account as { _id, accountNumber }, like the customer responses.
+// - accounts and transactions: plain arrays, newest first. Accounts carry their owner
+//   populated as { _id, name, email }. Transactions carry each account as
+//   { _id, accountNumber }, like the customer responses.
 
 // Mock only: unique ids for the notifications and audit entries the mock creates.
 let mockSeq = 0
@@ -78,16 +79,20 @@ const customerView = (user, { withBalance = false } = {}) => {
   }
 }
 
-// Bank account fields staff need. The card isn't one of them.
-const accountView = ({ _id, accountNumber, owner, balance, status, createdAt, updatedAt }) => ({
-  _id,
-  accountNumber,
-  owner,
-  balance,
-  status,
-  createdAt,
-  updatedAt,
-})
+// Bank account fields staff need. The card isn't one of them. `owner` is populated
+// with { _id, name, email }, like the backend sends it.
+const accountView = ({ _id, accountNumber, owner, balance, status, createdAt, updatedAt }) => {
+  const user = users.find((u) => u._id === owner)
+  return {
+    _id,
+    accountNumber,
+    owner: user ? { _id: user._id, name: user.name, email: user.email } : owner,
+    balance,
+    status,
+    createdAt,
+    updatedAt,
+  }
+}
 
 const accountRef = (id) => {
   if (!id) return null

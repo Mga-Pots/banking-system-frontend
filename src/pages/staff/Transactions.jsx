@@ -10,11 +10,11 @@ import { usePrivacy } from '../../context/PrivacyContext'
 import FilterSelect from '../../components/staff/FilterSelect'
 import ReviewTransactionModal from '../../components/staff/ReviewTransactionModal'
 import { reviewedMessage } from '../../components/staff/reviewMessages'
-import { getAccounts, getCustomers, getTransactions, reviewActionsFor } from '../../api/staff'
+import { getAccounts, getTransactions, reviewActionsFor } from '../../api/staff'
 import { accountIdOf, accountNumberOf } from '../../utils/transactions'
 import { formatAccountNumber, maskAccountNumber } from '../../utils/formatAccountNumber'
 import { formatTransactionDate } from '../../utils/formatDate'
-import { LOADING, combine, keepData, retrying, settle } from '../../utils/loadResults'
+import { LOADING, keepData, retrying, settle } from '../../utils/loadResults'
 
 const PAGE_SIZE = 10
 
@@ -37,8 +37,8 @@ const inTab = (tx, tab) => (tab === 'review' ? needsReview(tx) : tab === 'all' |
 export default function StaffTransactions() {
   const { showToast } = useToast()
   const { hidden } = usePrivacy()
-  // Accounts and customers only give the names, so the list still shows without them.
-  const [sections, setSections] = useState({ transactions: LOADING, accounts: LOADING, customers: LOADING })
+  // Accounts only give the owners' names, so the list still shows without them.
+  const [sections, setSections] = useState({ transactions: LOADING, accounts: LOADING })
   const [tab, setTab] = useState('review')
   const [type, setType] = useState('any')
   const [search, setSearch] = useState('')
@@ -47,11 +47,10 @@ export default function StaffTransactions() {
 
   const load = useCallback(
     () =>
-      settle([getTransactions(), getAccounts(), getCustomers()]).then(([transactions, accounts, customers]) =>
+      settle([getTransactions(), getAccounts()]).then(([transactions, accounts]) =>
         setSections((current) => ({
           transactions: keepData(current.transactions, transactions),
           accounts: keepData(current.accounts, accounts),
-          customers: keepData(current.customers, customers),
         })),
       ),
     [],
@@ -74,14 +73,11 @@ export default function StaffTransactions() {
 
   const transactions = sections.transactions.data ?? []
   const accounts = sections.accounts.data ?? []
-  const customers = sections.customers.data ?? []
   const loading = sections.transactions.status === 'loading'
-  const names = combine(sections.accounts, sections.customers)
 
   // The owner's name for a transaction's account, found through the accounts list.
   const nameFor = (account) => {
-    const owner = accounts.find((a) => a._id === accountIdOf(account))?.owner
-    return customers.find((c) => c._id === owner)?.name ?? null
+    return accounts.find((a) => a._id === accountIdOf(account))?.owner?.name ?? null
   }
   const numberFor = (account) => {
     const number = accountNumberOf(account)
@@ -161,11 +157,11 @@ export default function StaffTransactions() {
           </FilterSelect>
         </div>
 
-        {names.status === 'error' && (
+        {sections.accounts.status === 'error' && !sections.accounts.data && (
           <ErrorState
             compact
             title="Customer names didn’t load, so rows show account numbers only."
-            message={names.error}
+            message={sections.accounts.error}
             onRetry={retry}
             className="mb-5 rounded-xl border border-divider p-4"
           />

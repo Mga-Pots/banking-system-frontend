@@ -118,7 +118,7 @@ export default function StaffDashboard() {
   const accounts = sections.accounts.data ?? []
   const transactions = sections.transactions.data ?? []
 
-  const ownerOf = (accountId) => customers.find((c) => c._id === accounts.find((a) => a._id === accountId)?.owner)
+  const ownerOf = (accountId) => accounts.find((a) => a._id === accountId)?.owner
   const partyOf = (account) => {
     const name = ownerOf(accountIdOf(account))?.name
     const number = accountNumberOf(account)
