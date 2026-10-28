@@ -7,7 +7,7 @@ import Amount from '../ui/Amount'
 import RecentRecipients from './RecentRecipients'
 import SelectedRecipient from './SelectedRecipient'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
-import { pesosToCentavos, sanitizeAmountInput } from '../../utils/parseAmount'
+import { INSUFFICIENT_BALANCE, exceedsBalance, pesosToCentavos, sanitizeAmountInput } from '../../utils/parseAmount'
 import { APPROVAL_THRESHOLD_TEXT } from '../../utils/transferRules'
 
 // Fill in a recipient and an amount, then press "Transfer". It opens the
@@ -22,6 +22,9 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
   const accountRef = useRef(null)
   const amountRef = useRef(null)
   const focusTyped = useRef(false)
+
+  // Said while the customer types, not only on submit; an empty field is never an error.
+  const overBalance = exceedsBalance(amount, available)
 
   const digits = picked ? picked.accountNumber : accountNumber.replace(/\D/g, '')
 
@@ -39,7 +42,7 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
     const found = {}
     if (digits.length !== 12) found.accountNumber = 'Enter the 12-digit account number.'
     if (centavos === null || centavos <= 0) found.amount = 'Enter an amount greater than ₱0.00.'
-    else if (centavos > available) found.amount = 'Your balance is insufficient.'
+    else if (centavos > available) found.amount = INSUFFICIENT_BALANCE
     setErrors(found)
 
     if (found.accountNumber) return accountRef.current?.focus()
@@ -107,7 +110,7 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
             setAmount(sanitizeAmountInput(e.target.value))
             setErrors((current) => ({ ...current, amount: undefined }))
           }}
-          error={errors.amount}
+          error={errors.amount ?? (overBalance ? INSUFFICIENT_BALANCE : undefined)}
           hint={
             <>
               Available:{' '}
@@ -119,7 +122,7 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
           Transfers under {APPROVAL_THRESHOLD_TEXT} go through right away. {APPROVAL_THRESHOLD_TEXT} or more needs
           bank approval first.
         </p>
-        <Button type="submit" size="lg" disabled={frozen} className="w-full">
+        <Button type="submit" size="lg" disabled={frozen || overBalance} className="w-full">
           Transfer
         </Button>
       </form>

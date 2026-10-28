@@ -14,7 +14,7 @@ import TransferSuccess from '../../components/customer/TransferSuccess'
 import { useNotifications } from '../../context/NotificationsContext'
 import { getMyAccount, getRecentRecipients, lookupAccount } from '../../api/accounts'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
-import { pesosToCentavos, sanitizeAmountInput } from '../../utils/parseAmount'
+import { INSUFFICIENT_BALANCE, exceedsBalance, pesosToCentavos, sanitizeAmountInput } from '../../utils/parseAmount'
 import { APPROVAL_THRESHOLD_TEXT, needsApproval } from '../../utils/transferRules'
 
 const PRESETS = [50000, 100000, 500000, 1000000] // ₱500, ₱1,000, ₱5,000, ₱10,000
@@ -29,7 +29,7 @@ const readAmount = (text, available) => {
   const centavos = pesosToCentavos(text.replace(/\.$/, ''))
   if (centavos === null) return { centavos: null, problem: 'Enter a valid amount, like 1,000 or 250.50.' }
   if (centavos <= 0) return { centavos: null, problem: 'Enter an amount greater than ₱0.00.' }
-  if (centavos > available) return { centavos: null, problem: 'Your balance is insufficient.' }
+  if (centavos > available) return { centavos: null, problem: INSUFFICIENT_BALANCE }
   return { centavos, problem: '' }
 }
 
@@ -109,6 +109,8 @@ export default function Transfer() {
   const noFunds = Boolean(account) && !blocked && account.balance <= 0
   const { centavos, problem } = readAmount(amountText, account?.balance ?? 0)
   const approval = centavos !== null && needsApproval(centavos)
+  // Said while the customer types, not only on submit; an empty field is never an error.
+  const overBalance = exceedsBalance(amountText, account?.balance ?? 0)
 
   const submit = (e) => {
     e.preventDefault()
@@ -278,7 +280,7 @@ export default function Transfer() {
                       setAmountText(sanitizeAmountInput(e.target.value))
                       setErrors((current) => ({ ...current, amount: undefined }))
                     }}
-                    error={errors.amount}
+                    error={errors.amount ?? (overBalance ? INSUFFICIENT_BALANCE : undefined)}
                     hint={
                       loading ? (
                         <Skeleton className="h-4 w-32" />
@@ -313,7 +315,7 @@ export default function Transfer() {
                   />
                 </div>
 
-                <Button type="submit" size="lg" className="mt-5 w-full" disabled={blocked || loading}>
+                <Button type="submit" size="lg" className="mt-5 w-full" disabled={blocked || loading || overBalance}>
                   Transfer
                 </Button>
               </fieldset>
