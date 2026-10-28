@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
-import DetailsList from '../admin/DetailsList'
+import DetailsList from '../ui/DetailsList'
 import { verifyCustomer } from '../../api/staff'
 import { formatLongDate } from '../../utils/formatDate'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
