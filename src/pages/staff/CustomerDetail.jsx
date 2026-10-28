@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button'
 import Amount from '../../components/ui/Amount'
 import Sensitive from '../../components/ui/Sensitive'
 import Skeleton from '../../components/ui/Skeleton'
+import ErrorState from '../../components/ui/ErrorState'
 import { useToast } from '../../components/ui/Toast'
 import { ChevronLeftIcon, LockIcon, ShieldIcon, SnowIcon } from '../../components/ui/Icons'
 import AccountStatus from '../../components/customer/AccountStatus'
@@ -77,11 +78,7 @@ export default function StaffCustomerDetail() {
     return (
       <>
         <BackLink />
-        <Card role="alert">
-          <h2 className="text-xl font-bold text-text">We couldn’t load this customer</h2>
-          <p className="mt-1 mb-4 text-muted">{data.error}</p>
-          <Button onClick={load}>Try again</Button>
-        </Card>
+        <ErrorState title="We couldn’t load this customer" message={data.error} onRetry={load} />
       </>
     )
   }

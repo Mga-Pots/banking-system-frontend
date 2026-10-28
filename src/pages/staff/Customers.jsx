@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Skeleton from '../../components/ui/Skeleton'
+import ErrorState from '../../components/ui/ErrorState'
 import { useToast } from '../../components/ui/Toast'
 import AccountStatus from '../../components/customer/AccountStatus'
 import { IdCheck, UserStatus } from '../../components/admin/UserBadges'
@@ -67,13 +68,7 @@ export default function StaffCustomers() {
   const shown = filtered.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE)
 
   if (data.status === 'error' && customers.length === 0) {
-    return (
-      <Card role="alert">
-        <h2 className="text-xl font-bold text-text">We couldn’t load customers</h2>
-        <p className="mt-1 mb-4 text-muted">{data.error}</p>
-        <Button onClick={load}>Try again</Button>
-      </Card>
-    )
+    return <ErrorState title="We couldn’t load customers" message={data.error} onRetry={load} />
   }
 
   return (

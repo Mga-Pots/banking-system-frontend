@@ -3,6 +3,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Amount from '../../components/ui/Amount'
 import Skeleton from '../../components/ui/Skeleton'
+import ErrorState from '../../components/ui/ErrorState'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { useToast } from '../../components/ui/Toast'
 import { usePrivacy } from '../../context/PrivacyContext'
@@ -13,9 +14,9 @@ import { getAccounts, getCustomers, getTransactions, reviewActionsFor } from '..
 import { accountIdOf, accountNumberOf } from '../../utils/transactions'
 import { formatAccountNumber, maskAccountNumber } from '../../utils/formatAccountNumber'
 import { formatTransactionDate } from '../../utils/formatDate'
+import { LOADING, combine, keepData, retrying, settle } from '../../utils/loadResults'
 
 const PAGE_SIZE = 10
-const messageOf = (err) => err.response?.data?.message ?? err.message
 
 // "Needs review" is what staff open the page for: transfers still pending or flagged.
 const needsReview = (tx) => reviewActionsFor(tx).length > 0
@@ -36,31 +37,34 @@ const inTab = (tx, tab) => (tab === 'review' ? needsReview(tx) : tab === 'all' |
 export default function StaffTransactions() {
   const { showToast } = useToast()
   const { hidden } = usePrivacy()
-  const [data, setData] = useState({ status: 'loading', transactions: [], accounts: [], customers: [], error: '' })
+  // Accounts and customers only give the names, so the list still shows without them.
+  const [sections, setSections] = useState({ transactions: LOADING, accounts: LOADING, customers: LOADING })
   const [tab, setTab] = useState('review')
   const [type, setType] = useState('any')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [reviewing, setReviewing] = useState(null) // the transaction open in the dialog
 
-  const load = useCallback(async () => {
-    try {
-      const [transactions, accounts, customers] = await Promise.all([getTransactions(), getAccounts(), getCustomers()])
-      setData({
-        status: 'ready',
-        transactions: transactions.data,
-        accounts: accounts.data,
-        customers: customers.data,
-        error: '',
-      })
-    } catch (err) {
-      setData((current) => ({ ...current, status: 'error', error: messageOf(err) }))
-    }
-  }, [])
+  const load = useCallback(
+    () =>
+      settle([getTransactions(), getAccounts(), getCustomers()]).then(([transactions, accounts, customers]) =>
+        setSections((current) => ({
+          transactions: keepData(current.transactions, transactions),
+          accounts: keepData(current.accounts, accounts),
+          customers: keepData(current.customers, customers),
+        })),
+      ),
+    [],
+  )
 
   useEffect(() => {
     load()
   }, [load])
+
+  const retry = () => {
+    setSections(retrying)
+    load()
+  }
 
   // Any filter change goes back to the first page
   const filterBy = (setter) => (value) => {
@@ -68,8 +72,11 @@ export default function StaffTransactions() {
     setPage(0)
   }
 
-  const { transactions, accounts, customers } = data
-  const loading = data.status === 'loading'
+  const transactions = sections.transactions.data ?? []
+  const accounts = sections.accounts.data ?? []
+  const customers = sections.customers.data ?? []
+  const loading = sections.transactions.status === 'loading'
+  const names = combine(sections.accounts, sections.customers)
 
   // The owner's name for a transaction's account, found through the accounts list.
   const nameFor = (account) => {
@@ -104,14 +111,8 @@ export default function StaffTransactions() {
   const current = Math.min(page, pages - 1)
   const shown = filtered.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE)
 
-  if (data.status === 'error' && transactions.length === 0) {
-    return (
-      <Card role="alert">
-        <h2 className="text-xl font-bold text-text">We couldn’t load transactions</h2>
-        <p className="mt-1 mb-4 text-muted">{data.error}</p>
-        <Button onClick={load}>Try again</Button>
-      </Card>
-    )
+  if (!loading && !sections.transactions.data) {
+    return <ErrorState title="We couldn’t load transactions" message={sections.transactions.error} onRetry={retry} />
   }
 
   return (
@@ -159,6 +160,16 @@ export default function StaffTransactions() {
             <option value="cash_in">Cash ins</option>
           </FilterSelect>
         </div>
+
+        {names.status === 'error' && (
+          <ErrorState
+            compact
+            title="Customer names didn’t load, so rows show account numbers only."
+            message={names.error}
+            onRetry={retry}
+            className="mb-5 rounded-xl border border-divider p-4"
+          />
+        )}
 
         {loading ? (
           <Skeleton className="h-72" />

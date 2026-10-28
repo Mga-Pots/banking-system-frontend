@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Skeleton from '../../components/ui/Skeleton'
+import ErrorState from '../../components/ui/ErrorState'
 import { useToast } from '../../components/ui/Toast'
 import { UserPlusIcon } from '../../components/ui/Icons'
 import { FilterSelect, SearchInput } from '../../components/admin/AdminBits'
@@ -62,13 +63,7 @@ export default function AdminUsers() {
   const tableKey = [tab, q, statusFilter, idFilter].join('|')
 
   if (data.status === 'error' && users.length === 0) {
-    return (
-      <Card role="alert">
-        <h2 className="text-xl font-bold text-text">We couldn’t load users</h2>
-        <p className="mt-1 mb-4 text-muted">{data.error}</p>
-        <Button onClick={load}>Try again</Button>
-      </Card>
-    )
+    return <ErrorState title="We couldn’t load users" message={data.error} onRetry={load} />
   }
 
   return (

@@ -70,12 +70,13 @@ export function Tag({ tone = 'neutral', children }) {
   )
 }
 
-export function StatCard({ label, value, hint, loading }) {
+// `failed`: the data it counts didn't load.
+export function StatCard({ label, value, hint, loading, failed }) {
   return (
     <div className="flex flex-col gap-2 rounded-2xl border border-divider bg-white p-6">
       <p className="text-xs font-bold tracking-wider text-muted uppercase">{label}</p>
-      <p className="font-brand text-[28px] leading-tight font-semibold text-ink tabular-nums">{loading ? '–' : value}</p>
-      <p className="text-sm text-muted">{hint}</p>
+      <p className="font-brand text-[28px] leading-tight font-semibold text-ink tabular-nums">{loading || failed ? '–' : value}</p>
+      <p className="text-sm text-muted">{failed ? 'Couldn’t load' : hint}</p>
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Skeleton from '../../components/ui/Skeleton'
+import ErrorState, { ServerMessage } from '../../components/ui/ErrorState'
 import Weave from '../../components/ui/Weave'
 import { useToast } from '../../components/ui/Toast'
 import { ChevronDownIcon, KeyIcon, LockIcon, ShieldIcon, UserPlusIcon } from '../../components/ui/Icons'
@@ -13,8 +14,8 @@ import { getAuditLogs, getNotificationLogs, getUsers } from '../../api/admin'
 import { ACCESS_ACTIONS, TYPE_LABELS, describeLog } from '../../utils/auditText'
 import { isToday, withinDays } from '../../utils/dates'
 import { formatRelative } from '../../utils/formatDate'
+import { LOADING, combine, keepData, retrying, settle } from '../../utils/loadResults'
 
-const messageOf = (err) => err.response?.data?.message ?? err.message
 const accessIcons = { 'staff.create': UserPlusIcon, 'user.password_reset': KeyIcon, 'user.status_update': LockIcon }
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 
@@ -33,39 +34,57 @@ function CardHeader({ title, link, to }) {
   )
 }
 
+// Shown in place of a card's list when the data it needs didn't load.
+function SectionError({ title, section, onRetry }) {
+  return <ErrorState compact title={title} message={section.error} onRetry={onRetry} className="border-t border-divider pt-4" />
+}
+
 // Admin = IT and people. This overview only uses identity/access data, the audit log,
 // and notification metadata: no balances, bank accounts, or transactions.
+// Users, audit logs and notifications load separately, so one failing call only
+// shows an error in the parts that need it.
 export default function AdminDashboard() {
   const { user: me } = useAuth()
   const { showToast } = useToast()
-  const [data, setData] = useState({ status: 'loading', users: [], logs: [], notifs: [], error: '' })
+  const [sections, setSections] = useState({ users: LOADING, logs: LOADING, notifs: LOADING })
   const [creating, setCreating] = useState(false)
 
-  const load = useCallback(async () => {
-    try {
-      const [users, logs, notifs] = await Promise.all([getUsers(), getAuditLogs(), getNotificationLogs()])
-      setData({ status: 'ready', users: users.data, logs: logs.data, notifs: notifs.data, error: '' })
-    } catch (err) {
-      setData((d) => ({ ...d, status: 'error', error: messageOf(err) }))
-    }
-  }, [])
+  const load = useCallback(
+    () =>
+      settle([getUsers(), getAuditLogs(), getNotificationLogs()]).then(([users, logs, notifs]) =>
+        setSections((current) => ({
+          users: keepData(current.users, users),
+          logs: keepData(current.logs, logs),
+          notifs: keepData(current.notifs, notifs),
+        })),
+      ),
+    [],
+  )
 
   useEffect(() => {
     load()
   }, [load])
 
-  if (data.status === 'error' && data.users.length === 0) {
-    return (
-      <Card role="alert">
-        <h1 className="text-xl font-bold text-text">We couldn’t load the admin overview</h1>
-        <p className="mt-1 mb-4 text-muted">{data.error}</p>
-        <Button onClick={load}>Try again</Button>
-      </Card>
-    )
+  const retry = () => {
+    setSections(retrying)
+    load()
   }
 
-  const loading = data.status === 'loading'
-  const { users, logs, notifs } = data
+  // Nothing loaded at all: one page-sized error instead of several small ones.
+  if (Object.values(sections).every((s) => s.status === 'error' && !s.data)) {
+    return <ErrorState title="We couldn’t load the admin overview" message={sections.users.error} onRetry={retry} />
+  }
+
+  const usersLoading = sections.users.status === 'loading'
+  const usersFailed = !usersLoading && !sections.users.data
+  const logsLoading = sections.logs.status === 'loading'
+  const logsFailed = !logsLoading && !sections.logs.data
+  // Staff activity needs the users too: it's the logs whose actor is staff.
+  const activity = combine(sections.logs, sections.users)
+
+  const users = sections.users.data ?? []
+  const logs = sections.logs.data ?? []
+  const notifs = sections.notifs.data ?? []
   const userById = Object.fromEntries(users.map((u) => [u._id, u]))
   const byRole = (r) => users.filter((u) => u.role === r)
   const staff = byRole('staff')
@@ -88,31 +107,38 @@ export default function AdminDashboard() {
           {/* Deep-green banner, same as the customer one, but about people, not money */}
           <section
             aria-label="People on sinop"
-            aria-busy={loading}
+            aria-busy={usersLoading}
             className="relative isolate grid gap-6 overflow-hidden rounded-[20px] bg-ink p-6 text-white md:grid-cols-[1fr_300px]"
           >
             <Weave className="text-white [mask-image:linear-gradient(to_left,black,transparent_80%)]" opacity={0.1} />
             <div className="relative flex flex-col justify-between gap-6">
               <div>
                 <p className="text-[15px] text-white/80">People on sinop</p>
-                {loading ? (
+                {usersLoading ? (
                   <Skeleton className="mt-2 h-11 w-32 bg-white/10" />
+                ) : usersFailed ? (
+                  <div role="alert" className="mt-2">
+                    <p className="font-brand text-[22px] leading-tight font-bold">We couldn’t load users</p>
+                    <ServerMessage message={sections.users.error} color="text-white/80" className="mt-1 text-sm" />
+                  </div>
                 ) : (
                   <p className="mt-2 font-brand text-[44px] leading-none font-bold tabular-nums">
                     {users.length.toLocaleString('en-US')}
                   </p>
                 )}
-                <ul className="mt-3 flex flex-wrap gap-2">
-                  {[
-                    plural(byRole('customer').length, 'customer'),
-                    `${staff.length} staff`,
-                    plural(byRole('admin').length, 'admin'),
-                  ].map((t) => (
-                    <li key={t} className="rounded-full bg-white/12 px-3 py-1 text-[13px] font-semibold">
-                      {loading ? '–' : t}
-                    </li>
-                  ))}
-                </ul>
+                {!usersFailed && (
+                  <ul className="mt-3 flex flex-wrap gap-2">
+                    {[
+                      plural(byRole('customer').length, 'customer'),
+                      `${staff.length} staff`,
+                      plural(byRole('admin').length, 'admin'),
+                    ].map((t) => (
+                      <li key={t} className="rounded-full bg-white/12 px-3 py-1 text-[13px] font-semibold">
+                        {usersLoading ? '–' : t}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
               <div className="flex flex-wrap gap-3">
                 <Button variant="accent" size="lg" onClick={() => setCreating(true)}>
@@ -133,17 +159,19 @@ export default function AdminDashboard() {
                   Live
                 </span>
               </div>
+              {/* Each row: label, value, and whether its data is missing (loading or failed) */}
               {[
-                ['New sign-ups', byRole('customer').filter((u) => isToday(u.createdAt)).length],
-                ['Password resets', countLogs('user.password_reset', isToday)],
-                ['Staff created', countLogs('staff.create', isToday)],
-                ['Access changes', countLogs('user.status_update', isToday)],
-              ].map(([label, value]) => (
+                ['New sign-ups', byRole('customer').filter((u) => isToday(u.createdAt)).length, !sections.users.data],
+                ['Password resets', countLogs('user.password_reset', isToday), !sections.logs.data],
+                ['Staff created', countLogs('staff.create', isToday), !sections.logs.data],
+                ['Access changes', countLogs('user.status_update', isToday), !sections.logs.data],
+              ].map(([label, value, missing]) => (
                 <div key={label} className="flex items-center justify-between text-sm">
                   <span className="text-white/80">{label}</span>
-                  <span className="font-brand text-[15px] font-semibold tabular-nums">{loading ? '–' : value}</span>
+                  <span className="font-brand text-[15px] font-semibold tabular-nums">{missing ? '–' : value}</span>
                 </div>
               ))}
+              {logsFailed && <p className="text-[13px] text-white/80">Audit log activity couldn’t load.</p>}
             </div>
           </section>
 
@@ -152,33 +180,43 @@ export default function AdminDashboard() {
               label="Staff accounts"
               value={staff.length}
               hint={`${staff.filter((u) => u.status === 'active').length} active, ${staff.filter((u) => u.status !== 'active').length} off`}
-              loading={loading}
+              loading={usersLoading}
+              failed={usersFailed}
             />
             <StatCard
               label="New sign-ups"
               value={byRole('customer').filter((u) => withinDays(u.createdAt, 7)).length}
               hint="This week"
-              loading={loading}
+              loading={usersLoading}
+              failed={usersFailed}
             />
             <StatCard
               label="Can’t log in"
               value={users.filter((u) => u.status === 'disabled' || u.status === 'closed').length}
               hint="Disabled or closed"
-              loading={loading}
+              loading={usersLoading}
+              failed={usersFailed}
             />
             <StatCard
               label="Password resets"
               value={countLogs('user.password_reset', (d) => withinDays(d, 7))}
               hint="This week"
-              loading={loading}
+              loading={logsLoading}
+              failed={logsFailed}
             />
           </div>
 
           <Card>
             <CardHeader title="Staff activity" link="Audit log" to="/admin/audit-log" />
             <p className="-mt-1 pb-3 text-sm text-muted">What staff did lately. You can review it here but can’t change it.</p>
-            {loading ? (
+            {activity.status === 'loading' ? (
               <Skeleton className="h-40" />
+            ) : !activity.data ? (
+              <SectionError
+                title={activity === sections.logs ? 'We couldn’t load the audit log' : 'We couldn’t load who did what'}
+                section={activity}
+                onRetry={retry}
+              />
             ) : staffActivity.length === 0 ? (
               <p className="border-t border-divider pt-4 text-muted">No staff activity yet.</p>
             ) : (
@@ -207,8 +245,10 @@ export default function AdminDashboard() {
         <div className="flex min-w-0 flex-col gap-6">
           <Card>
             <CardHeader title="Access changes" link="All" to="/admin/audit-log" />
-            {loading ? (
+            {logsLoading ? (
               <Skeleton className="h-32" />
+            ) : logsFailed ? (
+              <SectionError title="We couldn’t load the audit log" section={sections.logs} onRetry={retry} />
             ) : accessChanges.length === 0 ? (
               <p className="border-t border-divider pt-4 text-muted">No access changes yet.</p>
             ) : (
@@ -237,8 +277,10 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader title="Security alerts sent" link="Log" to="/admin/notification-log" />
             <p className="-mt-1 pb-3 text-[13px] text-muted">Message text is hidden from admins.</p>
-            {loading ? (
+            {sections.notifs.status === 'loading' ? (
               <Skeleton className="h-28" />
+            ) : !sections.notifs.data ? (
+              <SectionError title="We couldn’t load notifications" section={sections.notifs} onRetry={retry} />
             ) : securityAlerts.length === 0 ? (
               <p className="border-t border-divider pt-4 text-muted">No security alerts yet.</p>
             ) : (

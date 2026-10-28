@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import Card from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
 import Skeleton from '../../components/ui/Skeleton'
+import ErrorState from '../../components/ui/ErrorState'
 import Pagination from '../../components/customer/Pagination'
 import { ShieldIcon } from '../../components/ui/Icons'
 import { Avatar, FilterSelect, SearchInput, Tag } from '../../components/admin/AdminBits'
@@ -10,42 +10,49 @@ import { useAuth } from '../../context/AuthContext'
 import { getAuditLogs, getUsers } from '../../api/admin'
 import { ACTION_LABELS, TYPE_LABELS, describeLog } from '../../utils/auditText'
 import { groupByDay, timeOf, withinDays } from '../../utils/dates'
+import { LOADING, keepData, retrying, settle } from '../../utils/loadResults'
 
 const PAGE_SIZE = 20
-const messageOf = (err) => err.response?.data?.message ?? err.message
 
 // Read-only record of every change by staff and admins. Nothing here can be edited.
+// Users only give the names, so the log still shows without them.
 export default function AdminAuditLog() {
   const { user: me } = useAuth()
-  const [data, setData] = useState({ status: 'loading', logs: [], users: [], error: '' })
+  const [sections, setSections] = useState({ logs: LOADING, users: LOADING })
   const [search, setSearch] = useState('')
   const [action, setAction] = useState('any')
   const [who, setWho] = useState('any')
   const [range, setRange] = useState('7')
   const [page, setPage] = useState(1)
 
-  const load = useCallback(async () => {
-    try {
-      const [logs, users] = await Promise.all([getAuditLogs(), getUsers()])
-      setData({ status: 'ready', logs: logs.data, users: users.data, error: '' })
-    } catch (err) {
-      setData((d) => ({ ...d, status: 'error', error: messageOf(err) }))
-    }
-  }, [])
+  const load = useCallback(
+    () =>
+      settle([getAuditLogs(), getUsers()]).then(([logs, users]) =>
+        setSections((current) => ({ logs: keepData(current.logs, logs), users: keepData(current.users, users) })),
+      ),
+    [],
+  )
 
   useEffect(() => {
     load()
   }, [load])
+
+  const retry = () => {
+    setSections(retrying)
+    load()
+  }
 
   const filterBy = (setter) => (value) => {
     setter(value)
     setPage(1)
   }
 
-  const userById = Object.fromEntries(data.users.map((u) => [u._id, u]))
-  const actors = [...new Set(data.logs.map((l) => l.actor))].filter((id) => userById[id])
+  const logs = sections.logs.data ?? []
+  const loading = sections.logs.status === 'loading'
+  const userById = Object.fromEntries((sections.users.data ?? []).map((u) => [u._id, u]))
+  const actors = [...new Set(logs.map((l) => l.actor))].filter((id) => userById[id])
   const q = search.trim().toLowerCase()
-  const rows = data.logs
+  const rows = logs
     .map((log) => ({ log, text: describeLog(log, userById, me?._id) }))
     .filter(({ log }) => action === 'any' || log.action === action)
     .filter(({ log }) => who === 'any' || log.actor === who)
@@ -57,14 +64,8 @@ export default function AdminAuditLog() {
   const shown = rows.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE)
   const groups = groupByDay(shown, (r) => r.log.createdAt)
 
-  if (data.status === 'error' && data.logs.length === 0) {
-    return (
-      <Card role="alert">
-        <h2 className="text-xl font-bold text-text">We couldn’t load the audit log</h2>
-        <p className="mt-1 mb-4 text-muted">{data.error}</p>
-        <Button onClick={load}>Try again</Button>
-      </Card>
-    )
+  if (!loading && !sections.logs.data) {
+    return <ErrorState title="We couldn’t load the audit log" message={sections.logs.error} onRetry={retry} />
   }
 
   return (
@@ -100,7 +101,17 @@ export default function AdminAuditLog() {
           </FilterSelect>
         </div>
 
-        {data.status === 'loading' ? (
+        {sections.users.status === 'error' && !sections.users.data && (
+          <ErrorState
+            compact
+            title="Names didn’t load, so entries show “Someone” and “a user”."
+            message={sections.users.error}
+            onRetry={retry}
+            className="mb-5 rounded-xl border border-divider p-4"
+          />
+        )}
+
+        {loading ? (
           <Skeleton className="h-72" />
         ) : (
           <div className="overflow-x-auto">

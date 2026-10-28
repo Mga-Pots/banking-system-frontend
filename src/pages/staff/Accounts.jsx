@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button'
 import Amount from '../../components/ui/Amount'
 import Sensitive from '../../components/ui/Sensitive'
 import Skeleton from '../../components/ui/Skeleton'
+import ErrorState from '../../components/ui/ErrorState'
 import { useToast } from '../../components/ui/Toast'
 import AccountStatus from '../../components/customer/AccountStatus'
 import AccountStatusModal from '../../components/staff/AccountStatusModal'
@@ -12,9 +13,9 @@ import CloseAccountModal from '../../components/staff/CloseAccountModal'
 import { getAccounts, getCustomers } from '../../api/staff'
 import { formatAccountNumber, maskAccountNumber } from '../../utils/formatAccountNumber'
 import { initialsOf } from '../../utils/names'
+import { LOADING, keepData, retrying, settle } from '../../utils/loadResults'
 
 const PAGE_SIZE = 8
-const messageOf = (err) => err.response?.data?.message ?? err.message
 
 const TABS = [
   ['all', 'All'],
@@ -28,25 +29,33 @@ const TABS = [
 // the customer's login too). Closed accounts can't change.
 export default function StaffAccounts() {
   const { showToast } = useToast()
-  const [data, setData] = useState({ status: 'loading', accounts: [], customers: [], error: '' })
+  // Customers only give the owners' names, so the list still shows without them.
+  const [sections, setSections] = useState({ accounts: LOADING, customers: LOADING })
   const [tab, setTab] = useState('all')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [changing, setChanging] = useState(null) // the account being frozen or reactivated
   const [closing, setClosing] = useState(null) // the account being closed
 
-  const load = useCallback(async () => {
-    try {
-      const [accounts, customers] = await Promise.all([getAccounts(), getCustomers()])
-      setData({ status: 'ready', accounts: accounts.data, customers: customers.data, error: '' })
-    } catch (err) {
-      setData((current) => ({ ...current, status: 'error', error: messageOf(err) }))
-    }
-  }, [])
+  const load = useCallback(
+    () =>
+      settle([getAccounts(), getCustomers()]).then(([accounts, customers]) =>
+        setSections((current) => ({
+          accounts: keepData(current.accounts, accounts),
+          customers: keepData(current.customers, customers),
+        })),
+      ),
+    [],
+  )
 
   useEffect(() => {
     load()
   }, [load])
+
+  const retry = () => {
+    setSections(retrying)
+    load()
+  }
 
   // Any filter change goes back to the first page
   const filterBy = (setter) => (value) => {
@@ -54,8 +63,9 @@ export default function StaffAccounts() {
     setPage(0)
   }
 
-  const { accounts, customers } = data
-  const loading = data.status === 'loading'
+  const accounts = sections.accounts.data ?? []
+  const customers = sections.customers.data ?? []
+  const loading = sections.accounts.status === 'loading'
   const ownerOf = (account) => customers.find((c) => c._id === account.owner)
   const count = (status) => accounts.filter((a) => status === 'all' || a.status === status).length
   const query = search.trim().toLowerCase()
@@ -77,14 +87,8 @@ export default function StaffAccounts() {
   const current = Math.min(page, pages - 1)
   const shown = filtered.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE)
 
-  if (data.status === 'error' && accounts.length === 0) {
-    return (
-      <Card role="alert">
-        <h2 className="text-xl font-bold text-text">We couldn’t load accounts</h2>
-        <p className="mt-1 mb-4 text-muted">{data.error}</p>
-        <Button onClick={load}>Try again</Button>
-      </Card>
-    )
+  if (!loading && !sections.accounts.data) {
+    return <ErrorState title="We couldn’t load accounts" message={sections.accounts.error} onRetry={retry} />
   }
 
   return (
@@ -125,6 +129,16 @@ export default function StaffAccounts() {
             className="h-12 w-full min-w-0 rounded-xl border-[1.5px] border-field-line bg-field px-4 text-[15px] text-text outline-none transition placeholder:text-placeholder focus:border-wallet focus:ring-4 focus:ring-wallet/20"
           />
         </div>
+
+        {sections.customers.status === 'error' && !sections.customers.data && (
+          <ErrorState
+            compact
+            title="Owner names didn’t load, so rows show “Unknown owner”."
+            message={sections.customers.error}
+            onRetry={retry}
+            className="mb-5 rounded-xl border border-divider p-4"
+          />
+        )}
 
         {loading ? (
           <Skeleton className="h-72" />

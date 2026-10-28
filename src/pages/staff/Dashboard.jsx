@@ -4,6 +4,7 @@ import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Amount from '../../components/ui/Amount'
 import Skeleton from '../../components/ui/Skeleton'
+import ErrorState from '../../components/ui/ErrorState'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { useToast } from '../../components/ui/Toast'
 import { ChevronDownIcon, FlagIcon, ShieldIcon, SnowIcon } from '../../components/ui/Icons'
@@ -17,23 +18,30 @@ import { accountIdOf, accountNumberOf } from '../../utils/transactions'
 import { formatAccountNumber, maskAccountNumber } from '../../utils/formatAccountNumber'
 import { formatTransactionDate } from '../../utils/formatDate'
 import { initialsOf } from '../../utils/names'
+import { LOADING, keepData, retrying, settle } from '../../utils/loadResults'
 
-const messageOf = (err) => err.response?.data?.message ?? err.message
 const shortDate = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
 // The overview's building blocks, same look as the admin overview.
-function StatCard({ label, value, hint, loading }) {
+// `section` is the load state of the data the card counts.
+function StatCard({ label, value, hint, section }) {
+  const failed = !section.data && section.status === 'error'
   return (
     <Card className="flex flex-col gap-2">
       <p className="text-xs font-bold tracking-wider text-muted uppercase">{label}</p>
-      {loading ? (
+      {section.status === 'loading' ? (
         <Skeleton className="h-8 w-16" />
       ) : (
-        <p className="font-brand text-[28px] leading-tight font-semibold text-ink tabular-nums">{value}</p>
+        <p className="font-brand text-[28px] leading-tight font-semibold text-ink tabular-nums">{failed ? '–' : value}</p>
       )}
-      <p className="text-sm text-muted">{hint}</p>
+      <p className="text-sm text-muted">{failed ? 'Couldn’t load' : hint}</p>
     </Card>
   )
+}
+
+// Shown in place of a card's list when the data it needs didn't load.
+function SectionError({ title, section, onRetry }) {
+  return <ErrorState compact title={title} message={section.error} onRetry={onRetry} className="border-t border-divider pt-4" />
 }
 
 function CardHeader({ title, link, to }) {
@@ -62,34 +70,32 @@ function RowIcon({ icon: Icon }) {
 }
 
 // What needs a staff member today: transfers to review, customers to verify, and
-// frozen accounts. Every list links to its full page.
+// frozen accounts. Every list links to its full page. The three lists load
+// separately, so one failing call only shows an error in the cards that need it.
 export default function StaffDashboard() {
   const { showToast } = useToast()
   const { hidden } = usePrivacy()
-  const [data, setData] = useState({ status: 'loading', customers: [], accounts: [], transactions: [], error: '' })
+  const [sections, setSections] = useState({ customers: LOADING, accounts: LOADING, transactions: LOADING })
   const [dialog, setDialog] = useState(null) // { type: 'verify' | 'review' | 'account', item }
 
-  const load = useCallback(async () => {
-    try {
-      const [customers, accounts, transactions] = await Promise.all([getCustomers(), getAccounts(), getTransactions()])
-      setData({
-        status: 'ready',
-        customers: customers.data,
-        accounts: accounts.data,
-        transactions: transactions.data,
-        error: '',
-      })
-    } catch (err) {
-      setData((current) => ({ ...current, status: 'error', error: messageOf(err) }))
-    }
-  }, [])
+  const load = useCallback(
+    () =>
+      settle([getCustomers(), getAccounts(), getTransactions()]).then(([customers, accounts, transactions]) =>
+        setSections((current) => ({
+          customers: keepData(current.customers, customers),
+          accounts: keepData(current.accounts, accounts),
+          transactions: keepData(current.transactions, transactions),
+        })),
+      ),
+    [],
+  )
 
   useEffect(() => {
     load()
   }, [load])
 
   const retry = () => {
-    setData((current) => ({ ...current, status: 'loading', error: '' }))
+    setSections(retrying)
     load()
   }
 
@@ -100,18 +106,17 @@ export default function StaffDashboard() {
     load()
   }
 
-  if (data.status === 'error' && data.customers.length === 0) {
-    return (
-      <Card role="alert">
-        <h2 className="text-xl font-bold text-text">We couldn’t load the overview</h2>
-        <p className="mt-1 mb-4 text-muted">{data.error}</p>
-        <Button onClick={retry}>Try again</Button>
-      </Card>
-    )
+  const all = Object.values(sections)
+  // Nothing loaded at all: one page-sized error instead of three small ones.
+  if (all.every((s) => s.status === 'error' && !s.data)) {
+    return <ErrorState title="We couldn’t load the overview" message={sections.customers.error} onRetry={retry} />
   }
+  // A refresh failed but the last data is still on screen.
+  const staleError = all.find((s) => s.status === 'error' && s.data)?.error
 
-  const loading = data.status === 'loading'
-  const { customers, accounts, transactions } = data
+  const customers = sections.customers.data ?? []
+  const accounts = sections.accounts.data ?? []
+  const transactions = sections.transactions.data ?? []
 
   const ownerOf = (accountId) => customers.find((c) => c._id === accounts.find((a) => a._id === accountId)?.owner)
   const partyOf = (account) => {
@@ -131,12 +136,12 @@ export default function StaffDashboard() {
     <>
       <h1 className="sr-only">Staff overview</h1>
 
-      {data.status === 'error' && (
+      {staleError && (
         <div
           role="alert"
           className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-status-failed px-5 py-4 text-sm font-semibold text-status-failed-text"
         >
-          <span>Couldn’t refresh: {data.error}</span>
+          <span>Couldn’t refresh: {staleError}</span>
           <button type="button" onClick={retry} className="-my-3 cursor-pointer py-3 underline">
             Try again
           </button>
@@ -144,17 +149,19 @@ export default function StaffDashboard() {
       )}
 
       <div className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatCard label="Held transfers" value={pending.length} hint="Waiting for approval" loading={loading} />
-        <StatCard label="Flagged" value={flagged.length} hint="Under review" loading={loading} />
-        <StatCard label="To verify" value={toVerify.length} hint="Waiting for ID check" loading={loading} />
-        <StatCard label="Frozen accounts" value={frozen.length} hint="Can’t cash in or transfer" loading={loading} />
+        <StatCard label="Held transfers" value={pending.length} hint="Waiting for approval" section={sections.transactions} />
+        <StatCard label="Flagged" value={flagged.length} hint="Under review" section={sections.transactions} />
+        <StatCard label="To verify" value={toVerify.length} hint="Waiting for ID check" section={sections.customers} />
+        <StatCard label="Frozen accounts" value={frozen.length} hint="Can’t cash in or transfer" section={sections.accounts} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <Card className="min-w-0">
           <CardHeader title="Transfers to review" link="All transactions" to="/staff/transactions" />
-          {loading ? (
+          {sections.transactions.status === 'loading' ? (
             <Skeleton className="h-40" />
+          ) : !sections.transactions.data ? (
+            <SectionError title="We couldn’t load transfers" section={sections.transactions} onRetry={retry} />
           ) : toReview.length === 0 ? (
             <p className="border-t border-divider pt-4 text-muted">
               Nothing to review right now. <span lang="fil">Ayos!</span>
@@ -186,8 +193,10 @@ export default function StaffDashboard() {
         <div className="flex min-w-0 flex-col gap-6">
           <Card>
             <CardHeader title="To verify" link="All customers" to="/staff/customers" />
-            {loading ? (
+            {sections.customers.status === 'loading' ? (
               <Skeleton className="h-32" />
+            ) : !sections.customers.data ? (
+              <SectionError title="We couldn’t load customers" section={sections.customers} onRetry={retry} />
             ) : toVerify.length === 0 ? (
               <p className="border-t border-divider pt-4 text-muted">Everyone is verified.</p>
             ) : (
@@ -220,8 +229,10 @@ export default function StaffDashboard() {
 
           <Card>
             <CardHeader title="Frozen accounts" link="All accounts" to="/staff/accounts" />
-            {loading ? (
+            {sections.accounts.status === 'loading' ? (
               <Skeleton className="h-24" />
+            ) : !sections.accounts.data ? (
+              <SectionError title="We couldn’t load accounts" section={sections.accounts} onRetry={retry} />
             ) : frozen.length === 0 ? (
               <p className="border-t border-divider pt-4 text-muted">No frozen accounts.</p>
             ) : (
