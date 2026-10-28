@@ -14,6 +14,10 @@ import Notifications from './pages/customer/Notifications'
 import Settings from './pages/customer/Settings'
 import ComingSoon from './pages/customer/ComingSoon'
 import StaffDashboard from './pages/staff/Dashboard'
+import StaffCustomers from './pages/staff/Customers'
+import StaffCustomerDetail from './pages/staff/CustomerDetail'
+import StaffAccounts from './pages/staff/Accounts'
+import StaffTransactions from './pages/staff/Transactions'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsers from './pages/admin/Users'
 
@@ -46,6 +50,10 @@ export default function App() {
           <Route element={<ProtectedRoute allowedRoles={['staff']} />}>
             <Route path="/staff" element={<StaffLayout />}>
               <Route index element={<StaffDashboard />} />
+              <Route path="customers" element={<StaffCustomers />} />
+              <Route path="customers/:id" element={<StaffCustomerDetail />} />
+              <Route path="accounts" element={<StaffAccounts />} />
+              <Route path="transactions" element={<StaffTransactions />} />
               <Route path="*" element={<Navigate to="/staff" replace />} />
             </Route>
           </Route>

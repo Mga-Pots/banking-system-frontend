@@ -135,6 +135,16 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 - `GET /admin/transactions`, `PATCH /admin/transactions/:id/status` (admin, staff)
 - `GET /admin/audit-logs`, `GET /admin/notifications` (admin)
 
+**Staff** (staff only, see `docs/least-privilege-guide.md`; all **assumed, to be confirmed** with the backend; called from `src/api/staff.js`)
+
+- `GET /staff/customers` → `data: [customers]`, customers only, newest first. Each is `{ _id, name, email, contactNumber?, status, isVerified, createdAt, updatedAt, account: { _id, accountNumber, status } }` (no balance, role or preferences).
+- `GET /staff/customers/:id` → the same customer, with `account.balance` added.
+- `PATCH /staff/customers/:id/verify` (no body; active, unverified customers only) → the updated customer.
+- `GET /staff/accounts` → `data: [accounts]`, newest first: `{ _id, accountNumber, owner, balance, status, createdAt, updatedAt }` (no card fields).
+- `PATCH /staff/accounts/:id/status` with `{ status: "frozen" | "active", reason }` (`reason` required to freeze; a closed account can't change) → the updated account.
+- `GET /staff/transactions` → `data: [transactions]`, newest first, each account as `{ _id, accountNumber }`.
+- `PATCH /staff/transactions/:id/status` with `{ status, reason? }` → the updated transaction. Transfers only: approve (`completed`) or cancel (`cancelled`) from `pending` or `flagged`; flag (`flagged`, `reason` required) from `pending` only. Approving credits the recipient; cancelling refunds the sender.
+
 If an endpoint or field changes, update this file and tell the backend pair, so both repos stay in sync.
 
 ## Git workflow
