@@ -23,7 +23,7 @@ The "Before" columns describe the backend's `dev` branch as of October 28, 2026.
 - The middleware section uses the backend's existing `protect` and `authorize`.
 - New sections: transaction review rules, notification messages, and known limits.
 - New open decision: password resets for staff accounts.
-- **Closing a customer is a staff action.** Staff close the bank account, and that closes the customer's user too. Admin only closes staff users, and can temporarily disable anyone.
+- **Closing a customer is a staff action.** Staff close the bank account, and that closes the customer's user too. Admin only closes staff users. Disabling and re-enabling users is dropped to keep the scope small.
 - Checklist items already done in the code are ticked.
 
 ---
@@ -39,7 +39,7 @@ Right now, every staff endpoint is also open to admin, so admin can do everythin
 
 The three roles:
 
-- **Admin:** IT and platform work. Staff accounts, user access status, credential recovery and audit review.
+- **Admin:** IT and platform work. Creating and closing staff accounts, credential recovery and audit review.
 - **Staff:** bank officers. The customer's whole life cycle: verification, bank accounts (including closing them), and transactions.
 - **Customer:** unchanged.
 
@@ -52,14 +52,13 @@ The biggest change is that admin loses every money-related action and every view
 | Action | Admin | Staff | Customer |
 | --- | --- | --- | --- |
 | Create staff accounts | Yes | No | No |
-| Disable or re-enable any user (a temporary lock, e.g. a stolen login) | Yes | No | No |
-| Close a staff user permanently | Yes | No | No |
+| Close a staff account permanently | Yes | No | No |
 | Reset a user's password (see open decision 4) | Yes | No | No |
 | View user list | All users, identity and access fields only | Customers only, with bank account info | No |
 | Verify a customer | No | Yes | No |
 | View all bank accounts | No | Yes | Own only |
-| Freeze or reactivate a bank account | No | Yes | No |
-| Close a customer (bank account and user together) | No | Yes | No |
+| Freeze or reactivate a bank account (the customer can still log in, but no money moves) | No | Yes | No |
+| Close a bank account (closes the customer's login too) | No | Yes | No |
 | View all transactions | No | Yes | Own only |
 | Approve a held transfer | No | Yes | No |
 | Flag or cancel a transaction | No | Yes | Cancel own pending only |
@@ -76,14 +75,16 @@ Admin keeps oversight through the audit log. Every staff action is recorded ther
 - Admin creates staff accounts with `POST /admin/staff`.
 - Admin accounts come from the seed script.
 
-No one can change a role afterwards. To remove someone's staff access, admin disables or closes their account. If a customer is hired as staff, they get a separate staff account with a work email, and their customer account stays as it is.
+No one can change a role afterwards. To remove someone's staff access, admin closes their account. If a customer is hired as staff, they get a separate staff account with a work email, and their customer account stays as it is.
 
 **Who closes what.**
 
 - **A customer** is closed by **staff**, by closing their bank account (see [Closing a customer](#closing-a-customer)). Each customer has exactly one bank account, so closing it closes their user too. Staff verify customers when they join, so staff also close them when they leave.
-- **A staff user** is closed permanently by **admin**.
-- **Anyone** can be disabled and re-enabled by **admin**, as a temporary lock (for example, a stolen login). Disabling a customer doesn't touch their bank account.
+- **A staff account** is closed permanently by **admin**.
+- **Nobody disables or re-enables users.** That feature is dropped to keep the scope small. The only temporary lock is a **freeze**, by staff, on a bank account: the customer can still log in and see their account, but they can't cash in, send or receive money until staff reactivate it.
 - A customer's own deactivation (`PATCH /users/me/deactivate`) is separate and unchanged.
+
+The user statuses in use are therefore `active`, `deactivated` (by the customer) and `closed`. `disabled` is no longer set by anything.
 
 ## Data visibility
 
@@ -128,7 +129,7 @@ The operational endpoints move to a new staff-only `/api/staff/*`, and `/api/adm
 | Narrowed | GET /admin/users and /admin/users/:id (planned, admin and staff) | Same paths, identity and access fields only | Admin |
 | Narrowed | GET /admin/notifications (built) | Same path, metadata only, no message | Admin |
 | Kept | POST /admin/staff | Unchanged | Admin |
-| Narrowed | PATCH /admin/users/:id/status (planned) | `disabled` or `active` for any user; `closed` only for staff users | Admin |
+| Narrowed | PATCH /admin/users/:id/status (planned) | Only `{ status: "closed" }`, and only for staff users | Admin |
 | Kept | GET /admin/audit-logs | Unchanged | Admin |
 | New | None | PATCH /admin/users/:id/reset-password | Admin |
 | Updated | GET /accounts/:id (built: customer, staff, admin) | Owner or staff; admin not allowed | Owner, staff |
@@ -207,7 +208,7 @@ app.use("/api/staff", protect, authorize("staff"), staffRoutes);
 
 Every backend route must follow these rules:
 
-1. Admin can't change their own status. Compare `req.user._id` with `:id` and return 403 if they match.
+1. Admin can only close **staff** users, and can't close themselves. `PATCH /admin/users/:id/status` accepts only `closed`, refuses customers and admins, and returns 403 if `req.user._id` matches `:id`.
 2. No endpoint changes a user's role. Registration always creates a `customer`, `POST /admin/staff` always creates `staff`, and admin accounts come from the seed script (`src/seed/createAdmin.js`), never through the API.
 3. A user whose status isn't `active` can't log in, and their existing token is rejected. **Already done:** `protect` checks `status` on every request.
 4. Audit logs are append-only. No update or delete endpoint exists for anyone.
@@ -216,7 +217,7 @@ Every backend route must follow these rules:
    | Action | `action` |
    | --- | --- |
    | Create staff | `staff.create` |
-   | Change user status | `user.status_update` |
+   | Close a staff account | `user.status_update` |
    | Reset password | `user.password_reset` |
    | Verify customer | `user.verify` |
    | Freeze, reactivate or close an account | `account.status_update` |
@@ -226,7 +227,7 @@ Every backend route must follow these rules:
 6. `/accounts/:id` and `/transactions/:id` allow the request only if the requester owns the record or is staff. Everyone else gets 403.
 7. A frozen or closed bank account can't send or receive transfers or cash-ins.
 8. Never return `passwordHash`. Set `select: false` on it in the User schema.
-9. Only staff close a customer, and only through `PATCH /staff/accounts/:id/status` with the rules in [Closing a customer](#closing-a-customer). `PATCH /admin/users/:id/status` refuses `closed` for a customer.
+9. Only staff close a customer, and only through `PATCH /staff/accounts/:id/status` with the rules in [Closing a customer](#closing-a-customer).
 
 ## Frontend changes
 
@@ -234,7 +235,7 @@ The admin and staff areas stop sharing pages. Each layout shows only its own rol
 
 | Area | Pages |
 | --- | --- |
-| `/admin/*` (AdminLayout) | Overview (users, staff and audit activity, no money data), Users (list and detail, no balances, with Reset password; Disable and Re-enable for anyone; Close permanently for staff users only), Create staff, Audit logs, Notification logs (metadata only) |
+| `/admin/*` (AdminLayout) | Overview (users, staff and audit activity, no money data), Users (list and detail, no balances, with Reset password; Close permanently for staff users only, no other status actions), Create staff, Audit logs, Notification logs (metadata only) |
 | `/staff/*` (StaffLayout) | Overview, Customers (list, and detail with the bank account), Verify customer, Accounts (freeze, reactivate or close), Transactions (approve, flag or cancel) |
 | `/customer/*` | Unchanged |
 
@@ -252,6 +253,7 @@ These are accepted on purpose. Be ready to explain them if the panel asks.
 
 - **Admin can create a staff account for themselves.** An admin could create a staff account under another email and use it to move money. The audit log records every `staff.create`, so this is detected, not prevented. Preventing it would need a second person to approve new staff accounts, which is out of scope.
 - **Audit review happens after the fact.** Admin can see what staff did, but can't stop it while it happens.
+- **There's no way to lock a customer's login.** Disabling users was dropped. If a customer's password is stolen, staff **freeze** the bank account so no money can move, and the password is reset (see open decision 4). The thief can still log in and see the balance until the password changes.
 
 ## Open decisions
 
@@ -308,7 +310,7 @@ Settle the open decisions first. Then each pair works through its own list.
 - [ ] Rebuild the admin overview without transactions, accounts or amounts
 - [ ] Remove Accounts and Transactions from the admin sidebar and routes
 - [x] Build the staff pages: Customers, Verify, Accounts (freeze, reactivate or close), Transactions (approve, flag or cancel) (on `feat/staff-pages`)
-- [ ] On admin Users, offer Close permanently for staff users only (customers get Disable and Re-enable)
+- [ ] On admin Users, offer Close permanently for staff users only, and remove Disable and Turn back on (from `ManageMenu.jsx`, `UserStatusModal.jsx` and `UserDialogs.jsx`)
 - [ ] Add the Reset password action to the admin user detail page
 - [ ] Show the admin notification log without message text
 - [ ] Remove the change-role UI: `ChangeRoleModal.jsx`, the role action in `ManageMenu.jsx` and `pages/admin/Users.jsx`, `updateUserRole()` in `src/api/admin.js`, and `user.role_update` in the admin overview's activity wording

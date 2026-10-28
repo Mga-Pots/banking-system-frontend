@@ -75,7 +75,7 @@ src/
   - Customers don't see incoming transfers until they're `completed`.
 - **Transaction statuses:** `pending`, `completed`, `failed`, `cancelled`, `flagged`.
 - **Account statuses:** `active`, `frozen`, `closed`.
-- **User statuses:** `active`, `deactivated` (by the customer), `disabled` or `closed` (by an admin).
+- **User statuses:** `active`, `deactivated` (by the customer), `closed` (a staff user closed by an admin, or a customer closed by staff when their bank account is closed). Nobody disables or re-enables users; `disabled` is no longer used.
 - **Cancelled transactions are never deleted.** They stay on record with status `cancelled`.
 
 ## Data shapes (from the backend's Mongoose schemas)
