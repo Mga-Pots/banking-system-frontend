@@ -9,7 +9,7 @@ import { accountEnding } from '../utils/formatAccountNumber'
 import { formatPeso } from '../utils/formatPeso'
 
 // Staff-only endpoints (/staff/*), from docs/least-privilege-guide.md. Staff verify
-// customers, freeze or reactivate bank accounts, and approve, flag or cancel transfers.
+// customers, freeze, reactivate or close bank accounts, and approve, flag or cancel transfers.
 // Admins can't call these: the backend answers 403, and the mock does the same.
 //
 // Response shapes are assumed, to be confirmed with the backend:
@@ -147,34 +147,64 @@ export const getAccounts = async () => {
   return (await api.get('/staff/accounts')).data
 }
 
-// Freeze ("frozen", reason required) or reactivate ("active"). A closed account can't
-// change. Returns the updated account.
+// Transfers still waiting on this account, in either direction: money is held in them.
+const heldTransfersOf = (accountId) =>
+  transactions.filter(
+    (t) =>
+      t.transactionType === 'transfer' &&
+      ['pending', 'flagged'].includes(t.status) &&
+      (t.sourceAccount === accountId || t.destinationAccount === accountId),
+  )
+
+const notices = {
+  frozen: (number, why) => `Your ${accountEnding(number)} has been frozen. Reason: ${why}. Please contact staff for help.`,
+  active: (number) => `Your ${accountEnding(number)} has been reactivated. You can cash in and transfer again.`,
+  closed: (number, why) => `Your ${accountEnding(number)} has been closed. Reason: ${why}.`,
+}
+
+// Freeze ("frozen", reason required), reactivate ("active") or close ("closed", reason
+// required). Closing is permanent and also closes the owner's user, so it needs a zero
+// balance and no pending or flagged transfers in or out (see "Closing a customer" in
+// docs/least-privilege-guide.md). A closed account can't change. Returns the updated account.
 export const updateAccountStatus = async (id, status, reason) => {
   if (USE_MOCK) {
     if (!isStaff()) return forbidden()
     const account = accounts.find((a) => a._id === id)
     if (!account) return mockError('Account not found')
-    if (!['frozen', 'active'].includes(status)) return mockError('Status must be frozen or active')
+    if (!['frozen', 'active', 'closed'].includes(status)) return mockError('Status must be frozen, active or closed')
     if (account.status === 'closed') return mockError('A closed account cannot be changed')
     if (account.status === status) {
       return mockError(status === 'frozen' ? 'Account is already frozen' : 'Account is already active')
     }
     const why = reason?.trim()
     if (status === 'frozen' && !why) return mockError('A reason is required to freeze an account')
+    if (status === 'closed') {
+      if (!why) return mockError('A reason is required to close an account')
+      if (account.balance !== 0) {
+        return mockError(
+          `The balance must be ₱0.00 before the account can be closed. This account still has ${formatPeso(account.balance)}.`,
+        )
+      }
+      if (heldTransfersOf(id).length > 0) {
+        return mockError('This account has transfers waiting for review. Approve or cancel them before closing it.')
+      }
+    }
 
+    const changedAt = now()
     account.status = status
-    account.updatedAt = now()
+    account.updatedAt = changedAt
+    if (status === 'closed') {
+      const owner = users.find((u) => u._id === account.owner)
+      if (owner) {
+        owner.status = 'closed'
+        owner.updatedAt = changedAt
+      }
+    }
     logMock('account.status_update', 'BankAccount', id)
-    notifyMock(
-      account.owner,
-      'account',
-      status === 'frozen'
-        ? `Your ${accountEnding(account.accountNumber)} has been frozen. Reason: ${why}. Please contact staff for help.`
-        : `Your ${accountEnding(account.accountNumber)} has been reactivated. You can cash in and transfer again.`,
-    )
+    notifyMock(account.owner, 'account', notices[status](account.accountNumber, why))
     return mockResponse(accountView(account))
   }
-  const body = status === 'frozen' ? { status, reason } : { status }
+  const body = status === 'active' ? { status } : { status, reason }
   return (await api.patch(`/staff/accounts/${id}/status`, body)).data
 }
 

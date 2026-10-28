@@ -141,7 +141,7 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 - `GET /staff/customers/:id` → the same customer, with `account.balance` added.
 - `PATCH /staff/customers/:id/verify` (no body; active, unverified customers only) → the updated customer.
 - `GET /staff/accounts` → `data: [accounts]`, newest first: `{ _id, accountNumber, owner, balance, status, createdAt, updatedAt }` (no card fields).
-- `PATCH /staff/accounts/:id/status` with `{ status: "frozen" | "active", reason }` (`reason` required to freeze; a closed account can't change) → the updated account.
+- `PATCH /staff/accounts/:id/status` with `{ status: "frozen" | "active" | "closed", reason }` (`reason` required to freeze or close; a closed account can't change) → the updated account. Closing is permanent and also closes the owner's user; it's refused unless the balance is 0 and no transfer is `pending` or `flagged` in or out of the account. Only staff close customers; admin's user status endpoint can't close a customer.
 - `GET /staff/transactions` → `data: [transactions]`, newest first, each account as `{ _id, accountNumber }`.
 - `PATCH /staff/transactions/:id/status` with `{ status, reason? }` → the updated transaction. Transfers only: approve (`completed`) or cancel (`cancelled`) from `pending` or `flagged`; flag (`flagged`, `reason` required) from `pending` only. Approving credits the recipient; cancelling refunds the sender.
 

@@ -8,6 +8,7 @@ import Skeleton from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/Toast'
 import AccountStatus from '../../components/customer/AccountStatus'
 import AccountStatusModal from '../../components/staff/AccountStatusModal'
+import CloseAccountModal from '../../components/staff/CloseAccountModal'
 import { getAccounts, getCustomers } from '../../api/staff'
 import { formatAccountNumber, maskAccountNumber } from '../../utils/formatAccountNumber'
 import { initialsOf } from '../../utils/names'
@@ -23,7 +24,8 @@ const TABS = [
 ]
 
 // Every bank account, with its owner and balance. Staff freeze active accounts
-// (with a reason) and reactivate frozen ones. Closed accounts can't change.
+// (with a reason), reactivate frozen ones, and close accounts for good (which closes
+// the customer's login too). Closed accounts can't change.
 export default function StaffAccounts() {
   const { showToast } = useToast()
   const [data, setData] = useState({ status: 'loading', accounts: [], customers: [], error: '' })
@@ -31,6 +33,7 @@ export default function StaffAccounts() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [changing, setChanging] = useState(null) // the account being frozen or reactivated
+  const [closing, setClosing] = useState(null) // the account being closed
 
   const load = useCallback(async () => {
     try {
@@ -127,14 +130,14 @@ export default function StaffAccounts() {
           <Skeleton className="h-72" />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-left">
+            <table className="w-full min-w-[840px] border-collapse text-left">
               <thead>
                 <tr className="border-t border-divider text-xs font-bold tracking-wider text-muted uppercase">
                   <th scope="col" className="py-3 pr-4 font-bold">Owner</th>
                   <th scope="col" className="w-[170px] py-3 pr-4 font-bold">Account number</th>
                   <th scope="col" className="w-[120px] py-3 pr-4 font-bold">Status</th>
                   <th scope="col" className="w-[160px] py-3 pr-4 text-right font-bold">Balance</th>
-                  <th scope="col" className="w-[150px] py-3 font-bold">
+                  <th scope="col" className="w-[230px] py-3 font-bold">
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>
@@ -184,13 +187,18 @@ export default function StaffAccounts() {
                         <Amount centavos={a.balance} sensitive />
                       </td>
                       <td className="py-3.5">
-                        <div className="flex justify-end">
+                        <div className="flex justify-end gap-2">
                           {a.status === 'active' && (
                             <Button variant="secondary" onClick={() => setChanging(a)}>
                               Freeze
                             </Button>
                           )}
                           {a.status === 'frozen' && <Button onClick={() => setChanging(a)}>Reactivate</Button>}
+                          {a.status !== 'closed' && (
+                            <Button variant="secondary" onClick={() => setClosing(a)}>
+                              Close
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -226,6 +234,18 @@ export default function StaffAccounts() {
           onSaved={(a) => {
             setChanging(null)
             showToast(a.status === 'frozen' ? 'The account is frozen.' : 'The account is active again.')
+            load()
+          }}
+        />
+      )}
+      {closing && (
+        <CloseAccountModal
+          account={closing}
+          ownerName={ownerOf(closing)?.name}
+          onClose={() => setClosing(null)}
+          onClosed={() => {
+            setClosing(null)
+            showToast('The account is closed.')
             load()
           }}
         />

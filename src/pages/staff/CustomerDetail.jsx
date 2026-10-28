@@ -6,12 +6,13 @@ import Amount from '../../components/ui/Amount'
 import Sensitive from '../../components/ui/Sensitive'
 import Skeleton from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/Toast'
-import { ChevronLeftIcon, ShieldIcon, SnowIcon } from '../../components/ui/Icons'
+import { ChevronLeftIcon, LockIcon, ShieldIcon, SnowIcon } from '../../components/ui/Icons'
 import AccountStatus from '../../components/customer/AccountStatus'
 import DetailsList from '../../components/admin/DetailsList'
 import { IdCheck, UserStatus } from '../../components/admin/UserBadges'
 import VerifyCustomerModal from '../../components/staff/VerifyCustomerModal'
 import AccountStatusModal from '../../components/staff/AccountStatusModal'
+import CloseAccountModal from '../../components/staff/CloseAccountModal'
 import { getCustomer } from '../../api/staff'
 import { formatLongDate } from '../../utils/formatDate'
 import { formatAccountNumber, maskAccountNumber } from '../../utils/formatAccountNumber'
@@ -37,7 +38,7 @@ export default function StaffCustomerDetail() {
   const { id } = useParams()
   const { showToast } = useToast()
   const [data, setData] = useState({ status: 'loading', customer: null, error: '' })
-  const [dialog, setDialog] = useState(null) // 'verify' | 'account'
+  const [dialog, setDialog] = useState(null) // 'verify' | 'account' | 'close'
 
   const load = useCallback(async () => {
     try {
@@ -159,15 +160,19 @@ export default function StaffCustomerDetail() {
                 ]}
               />
               {account.status === 'closed' ? (
-                <p className="text-sm text-muted">This account is closed. It can’t be frozen or reactivated.</p>
+                <p className="text-sm text-muted">This account and the customer’s login are closed permanently.</p>
               ) : (
-                <div>
+                <div className="flex flex-wrap gap-3">
                   <Button
                     variant={account.status === 'active' ? 'secondary' : 'primary'}
                     onClick={() => setDialog('account')}
                   >
                     <SnowIcon size={18} />
                     {account.status === 'active' ? 'Freeze account' : 'Reactivate account'}
+                  </Button>
+                  <Button variant="secondary" onClick={() => setDialog('close')}>
+                    <LockIcon size={18} />
+                    Close account
                   </Button>
                 </div>
               )}
@@ -191,6 +196,14 @@ export default function StaffCustomerDetail() {
           ownerName={customer.name}
           onClose={() => setDialog(null)}
           onSaved={(a) => done(a.status === 'frozen' ? 'The account is frozen.' : 'The account is active again.')}
+        />
+      )}
+      {dialog === 'close' && account && (
+        <CloseAccountModal
+          account={account}
+          ownerName={customer.name}
+          onClose={() => setDialog(null)}
+          onClosed={() => done(`${customer.name}’s account is closed.`)}
         />
       )}
     </>
