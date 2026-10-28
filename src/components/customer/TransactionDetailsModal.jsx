@@ -5,7 +5,7 @@ import Amount from '../ui/Amount'
 import Button from '../ui/Button'
 import CopyButton from '../ui/CopyButton'
 import StatusBadge from '../ui/StatusBadge'
-import { lastFour } from '../../utils/formatAccountNumber'
+import MaskedAccount from '../ui/MaskedAccount'
 import { formatDateTime } from '../../utils/formatDate'
 import { accountIdOf, accountNumberOf, describeTransaction, isInactive } from '../../utils/transactions'
 
@@ -84,7 +84,7 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
         <Row label="Date and time">{formatDateTime(tx.createdAt)}</Row>
         {showAccountRow && (
           <Row label="Account">
-            <span className="tabular-nums">•••• •••• {lastFour(otherNumber)}</span>
+            <MaskedAccount value={otherNumber} />
           </Row>
         )}
         {tx.transactionType === 'cash_in' && <Row label="Funds">Simulated, no real money</Row>}

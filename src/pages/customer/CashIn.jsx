@@ -15,7 +15,7 @@ import { useNotifications } from "../../context/NotificationsContext";
 import { usePrivacy } from "../../context/PrivacyContext";
 import { getMyAccount } from "../../api/accounts";
 import { cashIn } from "../../api/transactions";
-import { formatAccountNumber, lastFour } from "../../utils/formatAccountNumber";
+import { formatAccountNumber, maskAccountNumber } from "../../utils/formatAccountNumber";
 import { formatPeso } from "../../utils/formatPeso";
 import { pesosToCentavos, sanitizeAmountInput } from "../../utils/parseAmount";
 
@@ -207,7 +207,7 @@ export default function CashIn() {
                   ) : (
                     `${user?.name} · ${
                       hidden
-                        ? `•••• •••• ${lastFour(account.accountNumber)}`
+                        ? maskAccountNumber(account.accountNumber)
                         : formatAccountNumber(account.accountNumber)
                     }`
                   )}

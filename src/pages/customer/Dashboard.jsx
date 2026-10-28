@@ -23,7 +23,7 @@ import QuickTransfer from "../../components/customer/QuickTransfer";
 import TransactionDetailsModal from "../../components/customer/TransactionDetailsModal";
 import TransactionRow from "../../components/customer/TransactionRow";
 import TransferReviewModal from "../../components/customer/TransferReviewModal";
-import { formatAccountNumber, lastFour } from "../../utils/formatAccountNumber";
+import { formatAccountNumber, maskAccountNumber } from "../../utils/formatAccountNumber";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../context/NotificationsContext";
 import { usePrivacy } from "../../context/PrivacyContext";
@@ -184,7 +184,7 @@ export default function CustomerDashboard() {
                     <div className="mt-1 flex items-center gap-2">
                       <p className="text-xl font-semibold tracking-[0.06em] whitespace-nowrap tabular-nums">
                         <Sensitive
-                          mask={`•••• •••• ${lastFour(account.accountNumber)}`}
+                          mask={maskAccountNumber(account.accountNumber)}
                         >
                           {formatAccountNumber(account.accountNumber)}
                         </Sensitive>

@@ -8,6 +8,7 @@ import { LockIcon } from '../../components/ui/Icons'
 import { useToast } from '../../components/ui/Toast'
 import AmountPresets from '../../components/customer/AmountPresets'
 import RecentRecipients from '../../components/customer/RecentRecipients'
+import SelectedRecipient from '../../components/customer/SelectedRecipient'
 import TransferReviewModal from '../../components/customer/TransferReviewModal'
 import TransferSuccess from '../../components/customer/TransferSuccess'
 import { useNotifications } from '../../context/NotificationsContext'
@@ -50,6 +51,7 @@ export default function Transfer() {
   const { refresh: refreshNotifications } = useNotifications()
   const [load, setLoad] = useState({ status: 'loading', account: null, recipients: [], error: '' })
   const [accountNumber, setAccountNumber] = useState('')
+  const [picked, setPicked] = useState(null) // a saved recipient chosen from the recent list
   const [amountText, setAmountText] = useState('')
   const [errors, setErrors] = useState({})
   const [lookup, setLookup] = useState({ digits: '', status: 'idle', recipient: null, error: '' })
@@ -57,6 +59,7 @@ export default function Transfer() {
   const [result, setResult] = useState(null) // { transaction, recipientName, accountNumber, balance }
   const accountRef = useRef(null)
   const amountRef = useRef(null)
+  const focusTyped = useRef(false)
 
   useEffect(() => {
     let active = true
@@ -68,13 +71,14 @@ export default function Transfer() {
 
   const { account, recipients } = load
   const loading = load.status === 'loading'
-  const digits = accountNumber.replace(/\D/g, '')
+  // A picked recipient shows as name and masked number; its full number is only kept here.
+  const digits = picked ? picked.accountNumber : accountNumber.replace(/\D/g, '')
   const ownNumber = Boolean(account) && digits === account.accountNumber
 
   // Look the recipient up once all 12 digits are in, after a short pause so a paste or a
   // quick correction doesn't fire several calls. A late answer for an old number is ignored.
   useEffect(() => {
-    if (digits.length !== 12 || ownNumber) return
+    if (digits.length !== 12 || ownNumber || picked) return
     let active = true
     const timer = setTimeout(() => {
       lookupAccount(digits).then(
@@ -86,12 +90,20 @@ export default function Transfer() {
       active = false
       clearTimeout(timer)
     }
-  }, [digits, ownNumber])
+  }, [digits, ownNumber, picked])
 
-  const checking = digits.length === 12 && !ownNumber && lookup.digits !== digits
+  // The number field only exists once nothing is picked, so focus it after it appears.
+  useEffect(() => {
+    if (!picked && focusTyped.current) {
+      focusTyped.current = false
+      accountRef.current?.focus()
+    }
+  }, [picked])
+
+  const checking = digits.length === 12 && !ownNumber && !picked && lookup.digits !== digits
   const found = digits.length === 12 && lookup.digits === digits ? lookup : null
   const liveAccountError = ownNumber ? OWN_ACCOUNT_MESSAGE : found?.status === 'error' ? found.error : undefined
-  const recipient = found?.status === 'ready' ? found.recipient : null
+  const recipient = picked ?? (found?.status === 'ready' ? found.recipient : null)
 
   const blocked = Boolean(account) && account.status !== 'active'
   const noFunds = Boolean(account) && !blocked && account.balance <= 0
@@ -112,13 +124,16 @@ export default function Transfer() {
   }
 
   const chooseRecipient = (chosen) => {
-    setAccountNumber(formatAccountNumber(chosen.accountNumber))
+    setPicked(chosen)
+    setAccountNumber('')
     setErrors((current) => ({ ...current, accountNumber: undefined }))
   }
 
   const startNew = () => {
+    focusTyped.current = true
+    setPicked(null)
     setAccountNumber('')
-    accountRef.current?.focus()
+    accountRef.current?.focus() // when the field is already there; otherwise the effect does it
   }
 
   const handleSent = async (transaction) => {
@@ -147,6 +162,7 @@ export default function Transfer() {
 
   const sendAnother = () => {
     setResult(null)
+    setPicked(null)
     setAccountNumber('')
     setAmountText('')
     setErrors({})
@@ -213,35 +229,39 @@ export default function Transfer() {
                   )
                 )}
 
-                <Input
-                  ref={accountRef}
-                  id="transfer-account-number"
-                  label="Account number"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder="0000 0000 0000"
-                  value={accountNumber}
-                  onChange={(e) => {
-                    setAccountNumber(formatAccountNumber(e.target.value.slice(0, 14)))
-                    setErrors((current) => ({ ...current, accountNumber: undefined }))
-                  }}
-                  error={accountError}
-                  hint={
-                    checking ? (
-                      'Checking account…'
-                    ) : recipient ? (
-                      <span className="inline-flex items-center gap-2">
-                        <span
-                          aria-hidden="true"
-                          className="flex size-6 items-center justify-center rounded-full bg-mint text-[10px] font-bold text-ink"
-                        >
-                          {recipient.initials}
+                {picked ? (
+                  <SelectedRecipient recipient={picked} onClear={startNew} />
+                ) : (
+                  <Input
+                    ref={accountRef}
+                    id="transfer-account-number"
+                    label="Account number"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="0000 0000 0000"
+                    value={accountNumber}
+                    onChange={(e) => {
+                      setAccountNumber(formatAccountNumber(e.target.value.slice(0, 14)))
+                      setErrors((current) => ({ ...current, accountNumber: undefined }))
+                    }}
+                    error={accountError}
+                    hint={
+                      checking ? (
+                        'Checking account…'
+                      ) : recipient ? (
+                        <span className="inline-flex items-center gap-2">
+                          <span
+                            aria-hidden="true"
+                            className="flex size-6 items-center justify-center rounded-full bg-mint text-[10px] font-bold text-ink"
+                          >
+                            {recipient.initials}
+                          </span>
+                          <span className="font-bold text-text">{recipient.displayName}</span>
                         </span>
-                        <span className="font-bold text-text">{recipient.displayName}</span>
-                      </span>
-                    ) : undefined
-                  }
-                />
+                      ) : undefined
+                    }
+                  />
+                )}
 
                 <div className="mt-5">
                   <Input

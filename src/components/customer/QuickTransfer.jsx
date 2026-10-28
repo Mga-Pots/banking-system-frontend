@@ -1,26 +1,37 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Card from '../ui/Card'
 import Input from '../ui/Input'
 import Button from '../ui/Button'
 import Amount from '../ui/Amount'
 import RecentRecipients from './RecentRecipients'
+import SelectedRecipient from './SelectedRecipient'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
 import { pesosToCentavos, sanitizeAmountInput } from '../../utils/parseAmount'
 import { APPROVAL_THRESHOLD_TEXT } from '../../utils/transferRules'
 
 // Fill in a recipient and an amount, then press "Transfer". It opens the
-// review step; nothing is sent from here. The first recent recipient starts filled in.
+// review step; nothing is sent from here. The first recent recipient starts picked.
+// A picked recipient shows as name and masked number (its full number stays in `picked`);
+// "Change" goes back to typing a number.
 export default function QuickTransfer({ recipients, available, frozen, onReview }) {
-  const [accountNumber, setAccountNumber] = useState(() =>
-    recipients[0] ? formatAccountNumber(recipients[0].accountNumber) : '',
-  )
+  const [picked, setPicked] = useState(recipients[0] ?? null)
+  const [accountNumber, setAccountNumber] = useState('')
   const [amount, setAmount] = useState('')
   const [errors, setErrors] = useState({})
   const accountRef = useRef(null)
   const amountRef = useRef(null)
+  const focusTyped = useRef(false)
 
-  const digits = accountNumber.replace(/\D/g, '')
+  const digits = picked ? picked.accountNumber : accountNumber.replace(/\D/g, '')
+
+  // The number field only exists once nothing is picked, so focus it after it appears.
+  useEffect(() => {
+    if (!picked && focusTyped.current) {
+      focusTyped.current = false
+      accountRef.current?.focus()
+    }
+  }, [picked])
 
   const submit = (e) => {
     e.preventDefault()
@@ -37,13 +48,16 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
   }
 
   const chooseRecipient = (recipient) => {
-    setAccountNumber(formatAccountNumber(recipient.accountNumber))
+    setPicked(recipient)
+    setAccountNumber('')
     setErrors((current) => ({ ...current, accountNumber: undefined }))
   }
 
   const startNew = () => {
+    focusTyped.current = true
+    setPicked(null)
     setAccountNumber('')
-    accountRef.current?.focus()
+    accountRef.current?.focus() // when the field is already there; otherwise the effect does it
   }
 
   return (
@@ -62,20 +76,24 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
       </div>
 
       <form onSubmit={submit} noValidate className="flex flex-col gap-4">
-        <Input
-          ref={accountRef}
-          id="quick-account-number"
-          label="Account number"
-          inputMode="numeric"
-          autoComplete="off"
-          placeholder="0000 0000 0000"
-          value={accountNumber}
-          onChange={(e) => {
-            setAccountNumber(formatAccountNumber(e.target.value.slice(0, 14)))
-            setErrors((current) => ({ ...current, accountNumber: undefined }))
-          }}
-          error={errors.accountNumber}
-        />
+        {picked ? (
+          <SelectedRecipient recipient={picked} onClear={startNew} />
+        ) : (
+          <Input
+            ref={accountRef}
+            id="quick-account-number"
+            label="Account number"
+            inputMode="numeric"
+            autoComplete="off"
+            placeholder="0000 0000 0000"
+            value={accountNumber}
+            onChange={(e) => {
+              setAccountNumber(formatAccountNumber(e.target.value.slice(0, 14)))
+              setErrors((current) => ({ ...current, accountNumber: undefined }))
+            }}
+            error={errors.accountNumber}
+          />
+        )}
         <Input
           ref={amountRef}
           id="quick-amount"

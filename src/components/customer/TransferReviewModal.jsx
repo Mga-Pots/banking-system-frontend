@@ -2,17 +2,22 @@ import { useEffect, useState } from 'react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import Amount from '../ui/Amount'
+import { useAuth } from '../../context/AuthContext'
 import { lookupAccount } from '../../api/accounts'
 import { transfer } from '../../api/transactions'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
+import { maskedName } from '../../utils/names'
 import { APPROVAL_THRESHOLD_TEXT, needsApproval } from '../../utils/transferRules'
 
 const messageOf = (err) => err.response?.data?.message ?? err.message
 
 // The review step before any money moves. It checks the recipient, shows who gets
 // what, and only sends when the customer confirms. The Transfer page will reuse it.
+// Both accounts show their holder's short name (like "Juan D.") and the full account
+// number, saved recipient or not, so a wrong number can be caught before the money moves.
 // `onSent(transaction)` runs after a successful transfer.
 export default function TransferReviewModal({ recipientAccountNumber, amount, fromAccount, onClose, onSent }) {
+  const { user } = useAuth()
   const [lookup, setLookup] = useState({ status: 'loading', recipient: null, error: '' })
   const [submit, setSubmit] = useState({ sending: false, error: '' })
 
@@ -49,8 +54,9 @@ export default function TransferReviewModal({ recipientAccountNumber, amount, fr
       <dl>
         <div className="flex items-start justify-between gap-4 border-t border-divider py-3">
           <dt className="text-sm text-muted">From</dt>
-          <dd className="text-right text-sm font-bold text-text tabular-nums">
-            {formatAccountNumber(fromAccount.accountNumber)}
+          <dd className="text-right text-sm font-bold text-text">
+            {user?.name && <span className="block">{maskedName(user.name)}</span>}
+            <span className="block tabular-nums">{formatAccountNumber(fromAccount.accountNumber)}</span>
           </dd>
         </div>
         <div className="flex items-start justify-between gap-4 border-t border-divider py-3">

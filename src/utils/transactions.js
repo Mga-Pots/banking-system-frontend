@@ -1,4 +1,4 @@
-import { formatAccountNumber, lastFour } from './formatAccountNumber'
+import { maskAccountNumber } from './formatAccountNumber'
 
 // In customer responses, sourceAccount and destinationAccount are populated as
 // { _id, accountNumber } (assumed; still to be confirmed with the backend).
@@ -22,8 +22,8 @@ export const describeTransaction = (tx, myAccountId, names = {}) => {
   const other = accountNumberOf(incoming ? tx.sourceAccount : tx.destinationAccount)
   const label = incoming ? 'From' : 'To'
   const fallback = incoming ? 'Transfer received' : 'Transfer sent'
-  const who = other ? (names[other] ?? formatAccountNumber(other)) : null
+  const who = other ? (names[other] ?? maskAccountNumber(other)) : null
   const title = who ? `${label} ${who}` : fallback
-  const maskedTitle = other && !names[other] ? `${label} •••• ${lastFour(other)}` : title
+  const maskedTitle = title
   return { direction: incoming ? 'in' : 'out', title, maskedTitle }
 }

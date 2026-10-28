@@ -1,5 +1,5 @@
 import { PlusIcon } from '../ui/Icons'
-import { lastFour } from '../../utils/formatAccountNumber'
+import { accountEnding } from '../../utils/formatAccountNumber'
 import { firstNameOf } from '../../utils/names'
 
 const circle =
@@ -23,7 +23,7 @@ export default function RecentRecipients({ recipients, selected, onChoose, onNew
                 type="button"
                 onClick={() => onChoose(recipient)}
                 aria-pressed={isSelected}
-                aria-label={`${recipient.displayName}, account ending ${lastFour(recipient.accountNumber)}`}
+                aria-label={`${recipient.displayName}, ${accountEnding(recipient.accountNumber)}`}
                 className={`${circle} ${isSelected ? 'bg-ink text-white' : 'bg-mint text-ink hover:bg-mint'}`}
               >
                 {recipient.initials}

@@ -1,9 +1,8 @@
 import Amount from '../ui/Amount'
 import Button from '../ui/Button'
 import Modal from '../ui/Modal'
-import Sensitive from '../ui/Sensitive'
+import MaskedAccount from '../ui/MaskedAccount'
 import { CheckIcon } from '../ui/Icons'
-import { formatAccountNumber, lastFour } from '../../utils/formatAccountNumber'
 
 function Row({ label, children }) {
   return (
@@ -15,9 +14,10 @@ function Row({ label, children }) {
 }
 
 // What the customer sees after a transfer is sent, in a modal (which takes focus and
-// closes on Esc). `onClose` runs on any dismissal, including "Send another". A held
-// transfer says so in plain English: the sender is charged, the recipient is credited
-// after bank approval.
+// closes on Esc). `onClose` runs on any dismissal, including "Send another". The
+// recipient's account is always masked, even with "hide details" off, because receipts get
+// screenshotted and shared. A held transfer says so in plain English: the sender is
+// charged, the recipient is credited after bank approval.
 export default function TransferSuccess({ transaction, recipientName, accountNumber, onClose }) {
   const held = transaction.status === 'pending'
 
@@ -54,9 +54,7 @@ export default function TransferSuccess({ transaction, recipientName, accountNum
         </Row>
         <Row label="To">
           {recipientName && <span className="block">{recipientName}</span>}
-          <span className="block tabular-nums">
-            <Sensitive mask={`•••• •••• ${lastFour(accountNumber)}`}>{formatAccountNumber(accountNumber)}</Sensitive>
-          </span>
+          <MaskedAccount value={accountNumber} className="block" />
         </Row>
         <Row label="Status">{held ? 'Waiting for approval' : 'Completed'}</Row>
         <Row label="Reference number">
