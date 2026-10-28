@@ -1,5 +1,6 @@
 import { TOKEN_KEY } from './axios'
 import { users } from '../mocks/users'
+import { auditLogs } from '../mocks/auditLogs'
 
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
 
@@ -32,3 +33,15 @@ export const getMockUser = () => {
 
 // Removes the token before a user object is returned from a mock.
 export const withoutToken = ({ token: _token, ...user }) => user
+
+// Mock version of the backend's logAction(): every admin or staff change adds an
+// audit entry. The action names match the backend's (see CLAUDE.md).
+export const logMock = (action, targetType, targetId) =>
+  auditLogs.push({
+    _id: `l${Date.now()}`,
+    actor: getMockUser()?._id ?? null,
+    action,
+    targetType,
+    targetId,
+    createdAt: new Date().toISOString(),
+  })

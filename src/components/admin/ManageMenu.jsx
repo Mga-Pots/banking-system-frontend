@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDownIcon, LockIcon, ShieldIcon, SnowIcon, UsersIcon } from '../ui/Icons'
+import { ChevronDownIcon, KeyIcon, LockIcon, ShieldIcon, SnowIcon } from '../ui/Icons'
 
 const item =
   'flex w-full cursor-pointer items-start gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-ground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-wallet'
 
-// "Manage" button with a small menu: change role, disable / turn back on, close permanently.
-// `onPick(action)` gets "role" | "disable" | "enable" | "close".
+// "Manage" button with a small menu: reset password (customers only), disable / turn
+// back on, close permanently. Roles can't be changed (they're fixed at creation).
+// `onPick(action)` gets "reset" | "disable" | "enable" | "close".
 export default function ManageMenu({ user, onPick }) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState(null) // where the menu floats, so a scrolling table can't cut it off
@@ -51,7 +52,7 @@ export default function ManageMenu({ user, onPick }) {
         onClick={() => {
           const r = triggerRef.current.getBoundingClientRect()
           // Open below the button, or above it when there isn't room
-          const below = window.innerHeight - r.bottom > 260
+          const below = window.innerHeight - r.bottom > 280
           setPos({
             right: window.innerWidth - r.right,
             ...(below ? { top: r.bottom + 8 } : { bottom: window.innerHeight - r.top + 8 }),
@@ -69,13 +70,19 @@ export default function ManageMenu({ user, onPick }) {
 
       {open && pos && (
         <div style={pos} className="fixed z-30 w-72 rounded-2xl bg-white p-2 text-left shadow-xl ring-1 ring-divider">
-          <button type="button" className={item} onClick={() => pick('role')}>
-            <UsersIcon size={18} className="mt-0.5 shrink-0 text-ink" />
-            <span>
-              <span className="block text-sm font-semibold text-text">Change role</span>
-              <span className="block text-xs text-muted">Customer, staff, or admin</span>
-            </span>
-          </button>
+          {user.role === 'customer' ? (
+            <button type="button" className={item} onClick={() => pick('reset')}>
+              <KeyIcon size={18} className="mt-0.5 shrink-0 text-ink" />
+              <span>
+                <span className="block text-sm font-semibold text-text">Reset password</span>
+                <span className="block text-xs text-muted">Shows a temporary password once</span>
+              </span>
+            </button>
+          ) : (
+            <p className="px-3 pt-2 pb-3 text-xs text-muted">
+              Staff passwords are reset by the team with the seed script.
+            </p>
+          )}
           <button type="button" className={item} onClick={() => pick(disabled ? 'enable' : 'disable')}>
             {disabled ? (
               <ShieldIcon size={18} className="mt-0.5 shrink-0 text-ink" />
