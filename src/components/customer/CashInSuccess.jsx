@@ -41,10 +41,10 @@ export default function CashInSuccess({ amount, referenceNumber, onClose }) {
       </dl>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-        <Button to="/customer" size="lg">
+        <Button to="/customer" size="lg" className="sm:flex-1">
           Back to overview
         </Button>
-        <Button variant="secondary" size="lg" onClick={onClose}>
+        <Button variant="secondary" size="lg" className="sm:flex-1" onClick={onClose}>
           Add more
         </Button>
       </div>
