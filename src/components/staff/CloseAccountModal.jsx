@@ -7,12 +7,11 @@ import DetailsList from '../ui/DetailsList'
 import { updateAccountStatus } from '../../api/staff'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
 
-const CONFIRM_WORD = 'CLOSE'
-
 // Permanently closes a customer: their bank account and their login together
 // (see "Closing a customer" in docs/least-privilege-guide.md). The balance must be
 // ₱0.00 and no transfer can be waiting in either direction; the second rule is only
-// known to the server, so its refusal is shown as the error.
+// known to the server, so its refusal is shown as the error. To confirm, staff type the
+// account's number, so they can't close the wrong one by habit.
 // `account` needs _id, accountNumber and balance; `ownerName` is shown for context.
 export default function CloseAccountModal({ account, ownerName, onClose, onClosed }) {
   const [reason, setReason] = useState('')
@@ -22,7 +21,7 @@ export default function CloseAccountModal({ account, ownerName, onClose, onClose
   const [saving, setSaving] = useState(false)
 
   const hasMoney = account.balance > 0
-  const confirmed = typed.trim().toUpperCase() === CONFIRM_WORD
+  const confirmed = typed.replace(/\D/g, '') === account.accountNumber
 
   const handleClose = async () => {
     setError('')
@@ -64,8 +63,9 @@ export default function CloseAccountModal({ account, ownerName, onClose, onClose
         ) : (
           <>
             <p className="rounded-xl bg-status-failed px-4 py-3.5 text-sm font-semibold text-status-failed-text">
-              This can’t be undone. The bank account and the customer’s login are both closed for good. Their
-              transactions stay on record. Any transfer still waiting for review must be approved or cancelled first.
+              This can’t be undone. The bank account and the customer’s login are both closed for good. The bank
+              keeps the customer’s details for 30 days, then everything is deleted. Any transfer still waiting for
+              review must be approved or cancelled first.
             </p>
             <Input
               id="close-reason"
@@ -82,9 +82,11 @@ export default function CloseAccountModal({ account, ownerName, onClose, onClose
             />
             <Input
               id="close-confirm"
-              label={`Type ${CONFIRM_WORD} to confirm`}
+              label="Type the account number to confirm"
+              inputMode="numeric"
+              placeholder="0000 0000 0000"
               value={typed}
-              onChange={(e) => setTyped(e.target.value)}
+              onChange={(e) => setTyped(formatAccountNumber(e.target.value.slice(0, 14)))}
               autoComplete="off"
             />
             {error && (

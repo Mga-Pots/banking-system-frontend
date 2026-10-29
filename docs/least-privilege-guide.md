@@ -159,7 +159,7 @@ When it succeeds, in one session:
 - The customer gets an `account` notification. The audit log gets an `account.status_update` entry.
 - The customer's email stays taken (emails are unique and the closed user is kept), so they can't register again with it.
 
-The frontend asks staff to type CLOSE to confirm, because this can't be undone.
+The frontend asks staff to type the account number to confirm, because this can't be undone.
 
 **Reset password:**
 
