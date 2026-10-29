@@ -21,8 +21,14 @@ const PAGE_SIZE = 10
 // "Needs review" is what staff open the page for: transfers still pending or flagged.
 const needsReview = (tx) => reviewActionsFor(tx).length > 0
 
-const TABS = [
-  ['all', 'All'],
+const TYPE_TABS = [
+  ['any', 'All'],
+  ['transfer', 'Transfers'],
+  ['cash_in', 'Cash ins'],
+]
+
+const STATUS_OPTIONS = [
+  ['all', 'Status: All'],
   ['review', 'Needs review'],
   ['completed', 'Completed'],
   ['pending', 'Pending'],
@@ -31,7 +37,7 @@ const TABS = [
   ['cancelled', 'Cancelled'],
 ]
 
-const inTab = (tx, tab) => (tab === 'review' ? needsReview(tx) : tab === 'all' || tx.status === tab)
+const inStatus = (tx, s) => (s === 'review' ? needsReview(tx) : s === 'all' || tx.status === s)
 
 // Every transaction, newest first. Staff approve, flag or cancel held transfers here.
 export default function StaffTransactions() {
@@ -39,8 +45,8 @@ export default function StaffTransactions() {
   const { hidden } = usePrivacy()
   // Accounts only give the owners' names, so the list still shows without them.
   const [sections, setSections] = useState({ transactions: LOADING, accounts: LOADING })
-  const [tab, setTab] = useState('review')
   const [type, setType] = useState('any')
+  const [status, setStatus] = useState('review')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [reviewing, setReviewing] = useState(null) // the transaction open in the dialog
@@ -87,13 +93,14 @@ export default function StaffTransactions() {
   // "Juan Dela Cruz · 0012 3456 7890"
   const partyOf = (account) => [nameFor(account), numberFor(account)].filter(Boolean).join(' · ') || 'Unknown'
 
-  const count = (value) => transactions.filter((tx) => inTab(tx, value)).length
   const query = search.trim().toLowerCase()
   const digits = query.replace(/\s/g, '')
 
-  const filtered = transactions
-    .filter((tx) => inTab(tx, tab))
-    .filter((tx) => type === 'any' || tx.transactionType === type)
+  // Everything the status and the search allow, whatever its type. The type pill counts come
+  // from here, so each one says how many rows that type would show with the other filters
+  // still on, and `filtered` is the same list narrowed to the chosen type.
+  const byStatus = transactions
+    .filter((tx) => inStatus(tx, status))
     .filter((tx) => {
       if (!query) return true
       const sides = [tx.sourceAccount, tx.destinationAccount]
@@ -102,6 +109,9 @@ export default function StaffTransactions() {
         sides.some((side) => (digits && (accountNumberOf(side) ?? '').includes(digits)) || (nameFor(side) ?? '').toLowerCase().includes(query))
       )
     })
+
+  const countType = (value) => byStatus.filter((tx) => value === 'any' || tx.transactionType === value).length
+  const filtered = byStatus.filter((tx) => type === 'any' || tx.transactionType === type)
 
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const current = Math.min(page, pages - 1)
@@ -114,21 +124,21 @@ export default function StaffTransactions() {
   return (
     <>
       <div role="group" aria-label="Show" className="mb-6 flex flex-wrap gap-2">
-        {TABS.map(([value, label]) => {
-          const on = tab === value
+        {TYPE_TABS.map(([value, label]) => {
+          const on = type === value
           return (
             <button
               key={value}
               type="button"
               aria-pressed={on}
-              onClick={() => filterBy(setTab)(value)}
+              onClick={() => filterBy(setType)(value)}
               className={`inline-flex h-11 cursor-pointer items-center gap-2 rounded-full px-[18px] text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet ${
                 on ? 'bg-ink text-white' : 'border-[1.5px] border-field-line bg-white text-ink hover:bg-field'
               }`}
             >
               {label}
               <span className={`text-[13px] font-semibold ${on ? 'text-white/75' : 'text-muted'}`}>
-                {loading ? '–' : count(value)}
+                {loading ? '–' : countType(value)}
               </span>
             </button>
           )
@@ -150,10 +160,10 @@ export default function StaffTransactions() {
               className="h-12 w-full min-w-0 rounded-xl border-[1.5px] border-field-line bg-field px-4 text-[15px] text-text outline-none transition placeholder:text-placeholder focus:border-wallet focus:ring-4 focus:ring-wallet/20"
             />
           </div>
-          <FilterSelect id="type-filter" label="Type" value={type} onChange={filterBy(setType)}>
-            <option value="any">Type: All</option>
-            <option value="transfer">Transfers</option>
-            <option value="cash_in">Cash ins</option>
+          <FilterSelect id="status-filter" label="Status" value={status} onChange={filterBy(setStatus)}>
+            {STATUS_OPTIONS.map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
           </FilterSelect>
         </div>
 
@@ -188,7 +198,7 @@ export default function StaffTransactions() {
                 {shown.length === 0 && (
                   <tr className="border-t border-divider">
                     <td colSpan={6} className="py-10 text-center text-muted">
-                      {tab === 'review' && !query && type === 'any'
+                      {status === 'review' && !query && type === 'any'
                         ? 'Nothing needs review right now.'
                         : 'No transactions match these filters.'}
                     </td>

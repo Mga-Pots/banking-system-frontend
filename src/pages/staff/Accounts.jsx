@@ -18,10 +18,10 @@ import { LOADING, keepData, retrying, settle } from '../../utils/loadResults'
 const PAGE_SIZE = 8
 
 const TABS = [
-  ['all', 'All'],
   ['active', 'Active'],
   ['frozen', 'Frozen'],
   ['closed', 'Closed'],
+  ['all', 'All'],
 ]
 
 // Every bank account, with its owner and balance. Staff freeze active accounts
@@ -30,7 +30,7 @@ const TABS = [
 export default function StaffAccounts() {
   const { showToast } = useToast()
   const [sections, setSections] = useState({ accounts: LOADING })
-  const [tab, setTab] = useState('all')
+  const [tab, setTab] = useState('active')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
   const [changing, setChanging] = useState(null) // the account being frozen or reactivated
