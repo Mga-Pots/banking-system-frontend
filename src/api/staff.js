@@ -295,6 +295,8 @@ export const updateTransactionStatus = async (id, status, reason) => {
     logMock('transaction.status_update', 'Transaction', id)
     return mockResponse(transactionView(tx))
   }
-  const body = reason?.trim() ? { status, reason: reason.trim() } : { status }
-  return (await api.patch(`/staff/transactions/${id}/status`, body)).data
+  if (status === 'completed') return (await api.patch(`/staff/transactions/${id}/approve`)).data
+  if (status === 'cancelled') return (await api.patch(`/staff/transactions/${id}/reject`)).data
+  // Flagging has no backend route yet — mock only.
+  throw new Error('Flagging is not supported by the backend yet')
 }
