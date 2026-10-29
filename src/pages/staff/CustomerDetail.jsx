@@ -119,7 +119,7 @@ export default function StaffCustomerDetail() {
               <p className="text-sm font-semibold text-status-pending-text">
                 Not verified yet. Check a valid government ID before verifying.
               </p>
-              <Button onClick={() => setDialog('verify')} className="shrink-0">
+              <Button variant="positive" onClick={() => setDialog('verify')} className="shrink-0">
                 <ShieldIcon size={18} />
                 Verify
               </Button>
@@ -161,13 +161,13 @@ export default function StaffCustomerDetail() {
               ) : (
                 <div className="flex flex-wrap gap-3">
                   <Button
-                    variant={account.status === 'active' ? 'secondary' : 'primary'}
+                    variant={account.status === 'active' ? 'caution' : 'primary'}
                     onClick={() => setDialog('account')}
                   >
                     <SnowIcon size={18} />
                     {account.status === 'active' ? 'Freeze account' : 'Reactivate account'}
                   </Button>
-                  <Button variant="secondary" onClick={() => setDialog('close')}>
+                  <Button variant="danger" onClick={() => setDialog('close')}>
                     <LockIcon size={18} />
                     Close account
                   </Button>

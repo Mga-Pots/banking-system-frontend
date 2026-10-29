@@ -34,11 +34,11 @@ const ACTIONS = {
     reasonRequired: true,
   },
   cancelled: {
-    label: 'Cancel transfer',
+    label: 'Reject',
     icon: CloseIcon,
     variant: 'danger',
     explain: (amount) => `${amount} is refunded to the sender. The transfer stays on record as Cancelled.`,
-    confirm: 'Cancel transfer',
+    confirm: 'Reject transfer',
     reasonLabel: 'Note (optional)',
   },
 }

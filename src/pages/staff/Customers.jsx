@@ -164,7 +164,7 @@ export default function StaffCustomers() {
                     <td className="py-3.5">
                       <div className="flex justify-end">
                         {canVerify(c) ? (
-                          <Button variant="secondary" onClick={() => setVerifying(c)}>
+                          <Button variant="positive" onClick={() => setVerifying(c)}>
                             Verify
                           </Button>
                         ) : (

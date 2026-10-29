@@ -189,7 +189,7 @@ export default function StaffAccounts() {
                         {/* No owner means no customer to act for, so nothing here can be changed */}
                         <div className="flex justify-end gap-2" title={owner ? undefined : 'This account has no owner on record'}>
                           {a.status === 'active' && (
-                            <Button variant="secondary" disabled={!owner} onClick={() => setChanging(a)}>
+                            <Button variant="caution" disabled={!owner} onClick={() => setChanging(a)}>
                               Freeze
                             </Button>
                           )}
@@ -199,7 +199,7 @@ export default function StaffAccounts() {
                             </Button>
                           )}
                           {a.status !== 'closed' && (
-                            <Button variant="secondary" disabled={!owner} onClick={() => setClosing(a)}>
+                            <Button variant="danger" disabled={!owner} onClick={() => setClosing(a)}>
                               Close
                             </Button>
                           )}

@@ -8,6 +8,11 @@ const variants = {
   primary: 'bg-ink text-white hover:bg-forest focus-visible:outline-wallet',
   secondary: 'border-[1.5px] border-field-line bg-white text-ink hover:bg-field focus-visible:outline-wallet',
   white: 'bg-white text-ink hover:bg-field focus-visible:outline-wallet',
+  // for a clearly good action that should stand out from plain ones, like verifying a customer
+  positive: 'bg-wallet text-white hover:brightness-110 focus-visible:outline-wallet',
+  // for pausing something, like freezing an account: amber, between green and red
+  caution:
+    'bg-status-pending text-status-pending-text hover:brightness-95 focus-visible:outline-status-pending-text',
   // for actions that can't be undone, like cancelling a transaction
   danger: 'bg-error text-white hover:brightness-110 focus-visible:outline-error',
   // for dark green surfaces
