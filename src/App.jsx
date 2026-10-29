@@ -17,11 +17,13 @@ import StaffCustomers from './pages/staff/Customers'
 import StaffCustomerDetail from './pages/staff/CustomerDetail'
 import StaffAccounts from './pages/staff/Accounts'
 import StaffTransactions from './pages/staff/Transactions'
+import StaffSettings from './pages/staff/Settings'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsers from './pages/admin/Users'
 import AdminStaff from './pages/admin/Staff'
 import AdminAuditLog from './pages/admin/AuditLog'
 import AdminNotificationLog from './pages/admin/NotificationLog'
+import AdminSettings from './pages/admin/Settings'
 
 function Home() {
   const { role } = useAuth()
@@ -56,6 +58,7 @@ export default function App() {
               <Route path="customers/:id" element={<StaffCustomerDetail />} />
               <Route path="accounts" element={<StaffAccounts />} />
               <Route path="transactions" element={<StaffTransactions />} />
+              <Route path="settings" element={<StaffSettings />} />
               <Route path="*" element={<Navigate to="/staff" replace />} />
             </Route>
           </Route>
@@ -67,6 +70,7 @@ export default function App() {
               <Route path="staff" element={<AdminStaff />} />
               <Route path="audit-log" element={<AdminAuditLog />} />
               <Route path="notification-log" element={<AdminNotificationLog />} />
+              <Route path="settings" element={<AdminSettings />} />
               <Route path="*" element={<Navigate to="/admin" replace />} />
             </Route>
           </Route>

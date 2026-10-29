@@ -5,6 +5,7 @@ const titles = {
   '/admin/staff': 'Staff',
   '/admin/audit-log': 'Audit log',
   '/admin/notification-log': 'Notification log',
+  '/admin/settings': 'Profile',
 }
 
 export const titleFor = (pathname) => titles[pathname.replace(/\/$/, '')] ?? null

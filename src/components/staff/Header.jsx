@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useLocation, useMatch, useNavigate } from 'react-router-dom'
-import { ChevronDownIcon, EyeIcon, EyeOffIcon, LogOutIcon } from '../ui/Icons'
+import { Link, useLocation, useMatch, useNavigate } from 'react-router-dom'
+import { ChevronDownIcon, EyeIcon, EyeOffIcon, LogOutIcon, UserIcon } from '../ui/Icons'
 import { useAuth } from '../../context/AuthContext'
 import { usePrivacy } from '../../context/PrivacyContext'
 import { initialsOf } from '../../utils/names'
@@ -107,6 +107,16 @@ export default function StaffHeader() {
                   <span className="block truncate">{user?.name}</span>
                   <span className="block truncate font-normal text-muted">{user?.email}</span>
                 </p>
+              </div>
+              <div className="border-b border-divider py-1">
+                <Link
+                  to="/staff/settings"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-ground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-wallet"
+                >
+                  <UserIcon size={18} className="shrink-0 text-ink" />
+                  <span className="text-sm font-semibold text-text">Profile</span>
+                </Link>
               </div>
               <div className="pt-1">
                 <button
