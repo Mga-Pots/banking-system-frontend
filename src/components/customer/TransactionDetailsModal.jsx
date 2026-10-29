@@ -8,6 +8,7 @@ import StatusBadge from '../ui/StatusBadge'
 import MaskedAccount from '../ui/MaskedAccount'
 import { formatDateTime } from '../../utils/formatDate'
 import { accountIdOf, accountNumberOf, describeTransaction, isInactive } from '../../utils/transactions'
+import { needsApproval, noteLabel } from '../../utils/transferRules'
 
 const messageOf = (err) => err.response?.data?.message ?? err.message
 
@@ -89,6 +90,7 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
         )}
         {tx.transactionType === 'cash_in' && <Row label="Funds">Simulated, no real money</Row>}
         {tx.flagReason && <Row label="Note">{tx.flagReason}</Row>}
+        {tx.note && !incoming && <Row label={noteLabel(needsApproval(tx.amount))}>{tx.note}</Row>}
       </dl>
 
       {canCancel && (

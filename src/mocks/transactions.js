@@ -44,6 +44,7 @@ export const transactions = [
     performedBy: "u1",
     status: "pending",
     flagReason: "Held for staff review",
+    note: "Down payment for a condo unit",
   }),
   make("t4", { d: 2 }, "0921", {
     ...cashIn,

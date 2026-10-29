@@ -7,7 +7,7 @@ import { lookupAccount } from '../../api/accounts'
 import { transfer } from '../../api/transactions'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
 import { maskedName } from '../../utils/names'
-import { APPROVAL_THRESHOLD_TEXT, needsApproval } from '../../utils/transferRules'
+import { APPROVAL_THRESHOLD_TEXT, needsApproval, noteLabel } from '../../utils/transferRules'
 
 const messageOf = (err) => err.response?.data?.message ?? err.message
 
@@ -16,7 +16,7 @@ const messageOf = (err) => err.response?.data?.message ?? err.message
 // Both accounts show their holder's short name (like "Juan D.") and the full account
 // number, saved recipient or not, so a wrong number can be caught before the money moves.
 // `onSent(transaction)` runs after a successful transfer.
-export default function TransferReviewModal({ recipientAccountNumber, amount, fromAccount, onClose, onSent }) {
+export default function TransferReviewModal({ recipientAccountNumber, amount, note = '', fromAccount, onClose, onSent }) {
   const { user } = useAuth()
   const [lookup, setLookup] = useState({ status: 'loading', recipient: null, error: '' })
   const [submit, setSubmit] = useState({ sending: false, error: '' })
@@ -34,7 +34,7 @@ export default function TransferReviewModal({ recipientAccountNumber, amount, fr
   const confirm = async () => {
     setSubmit({ sending: true, error: '' })
     try {
-      const res = await transfer({ recipientAccountNumber, amount })
+      const res = await transfer({ recipientAccountNumber, amount, note })
       onSent(res.data)
     } catch (err) {
       setSubmit({ sending: false, error: messageOf(err) })
@@ -67,6 +67,12 @@ export default function TransferReviewModal({ recipientAccountNumber, amount, fr
             <span className="block tabular-nums">{formatAccountNumber(recipientAccountNumber)}</span>
           </dd>
         </div>
+        {note && (
+          <div className="flex items-start justify-between gap-4 border-t border-divider py-3">
+            <dt className="text-sm text-muted">{noteLabel(approval)}</dt>
+            <dd className="min-w-0 text-right text-sm font-bold break-words text-text">{note}</dd>
+          </div>
+        )}
       </dl>
 
       <p

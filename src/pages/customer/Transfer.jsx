@@ -15,7 +15,13 @@ import { useNotifications } from '../../context/NotificationsContext'
 import { getMyAccount, getRecentRecipients, lookupAccount } from '../../api/accounts'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
 import { INSUFFICIENT_BALANCE, exceedsBalance, pesosToCentavos, sanitizeAmountInput } from '../../utils/parseAmount'
-import { APPROVAL_THRESHOLD_TEXT, needsApproval } from '../../utils/transferRules'
+import {
+  APPROVAL_THRESHOLD_TEXT,
+  NOTE_MAX_LENGTH,
+  NOTE_REQUIRED_MESSAGE,
+  needsApproval,
+  noteField,
+} from '../../utils/transferRules'
 
 const PRESETS = [50000, 100000, 500000, 1000000] // ₱500, ₱1,000, ₱5,000, ₱10,000
 const LOOKUP_DELAY_MS = 300
@@ -53,12 +59,14 @@ export default function Transfer() {
   const [accountNumber, setAccountNumber] = useState('')
   const [picked, setPicked] = useState(null) // a saved recipient chosen from the recent list
   const [amountText, setAmountText] = useState('')
+  const [note, setNote] = useState('')
   const [errors, setErrors] = useState({})
   const [lookup, setLookup] = useState({ digits: '', status: 'idle', recipient: null, error: '' })
-  const [review, setReview] = useState(null) // { recipientAccountNumber, amount }
+  const [review, setReview] = useState(null) // { recipientAccountNumber, amount, note }
   const [result, setResult] = useState(null) // { transaction, recipientName, accountNumber, balance }
   const accountRef = useRef(null)
   const amountRef = useRef(null)
+  const noteRef = useRef(null)
   const focusTyped = useRef(false)
 
   useEffect(() => {
@@ -118,11 +126,13 @@ export default function Transfer() {
     if (digits.length !== 12) next.accountNumber = 'Enter the 12-digit account number.'
     else if (liveAccountError) next.accountNumber = liveAccountError
     if (problem) next.amount = problem
+    else if (approval && !note.trim()) next.note = NOTE_REQUIRED_MESSAGE
     setErrors(next)
 
     if (next.accountNumber) return accountRef.current?.focus()
     if (next.amount) return amountRef.current?.focus()
-    setReview({ recipientAccountNumber: digits, amount: centavos })
+    if (next.note) return noteRef.current?.focus()
+    setReview({ recipientAccountNumber: digits, amount: centavos, note: note.trim() })
   }
 
   const chooseRecipient = (chosen) => {
@@ -167,6 +177,7 @@ export default function Transfer() {
     setPicked(null)
     setAccountNumber('')
     setAmountText('')
+    setNote('')
     setErrors({})
   }
 
@@ -315,6 +326,23 @@ export default function Transfer() {
                   />
                 </div>
 
+                <div className="mt-5">
+                  <Input
+                    ref={noteRef}
+                    id="transfer-note"
+                    label={noteField(approval).label}
+                    autoComplete="off"
+                    maxLength={NOTE_MAX_LENGTH}
+                    placeholder={noteField(approval).placeholder}
+                    value={note}
+                    onChange={(e) => {
+                      setNote(e.target.value)
+                      setErrors((current) => ({ ...current, note: undefined }))
+                    }}
+                    error={errors.note}
+                  />
+                </div>
+
                 <Button type="submit" size="lg" className="mt-5 w-full" disabled={blocked || loading || overBalance}>
                   Transfer
                 </Button>
@@ -351,6 +379,7 @@ export default function Transfer() {
         <TransferReviewModal
           recipientAccountNumber={review.recipientAccountNumber}
           amount={review.amount}
+          note={review.note}
           fromAccount={account}
           onClose={() => setReview(null)}
           onSent={handleSent}

@@ -48,7 +48,7 @@ export default function CustomerDashboard() {
   });
   const [openTx, setOpenTx] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [review, setReview] = useState(null); // { recipientAccountNumber, amount }
+  const [review, setReview] = useState(null); // { recipientAccountNumber, amount, note }
   const [transferKey, setTransferKey] = useState(0); // changing it resets Quick transfer
 
   const load = useCallback(async () => {
@@ -366,6 +366,7 @@ export default function CustomerDashboard() {
         <TransferReviewModal
           recipientAccountNumber={review.recipientAccountNumber}
           amount={review.amount}
+          note={review.note}
           fromAccount={account}
           onClose={() => setReview(null)}
           onSent={handleSent}

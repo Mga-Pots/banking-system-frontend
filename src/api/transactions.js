@@ -90,7 +90,9 @@ export const cashIn = async ({ amount }) => {
 // holdForReview: true) the transfer stays pending: the sender is charged now, and the
 // recipient is credited only when the bank approves it. The real backend decides this
 // itself; the mock mirrors it.
-export const transfer = async ({ recipientAccountNumber, amount, holdForReview = false }) => {
+// `note` is the sender's reason, asked for when the transfer needs approval (assumed field,
+// to be confirmed with the backend). It is only sent when it isn't empty.
+export const transfer = async ({ recipientAccountNumber, amount, note = '', holdForReview = false }) => {
   if (USE_MOCK) {
     if (!isValidAmount(amount)) return mockError('Amount must be a positive whole number of centavos')
     const from = getMyMockAccount()
@@ -111,12 +113,14 @@ export const transfer = async ({ recipientAccountNumber, amount, holdForReview =
       sourceAccount: from._id,
       destinationAccount: to._id,
       ...(held && { status: 'pending', flagReason: HELD_REASON }),
+      ...(note.trim() && { note: note.trim() }),
     })
     transactions.unshift(tx)
     return mockResponse(populate(tx))
   }
   const body = { recipientAccountNumber: normalizeAccountNumber(recipientAccountNumber), amount }
   if (holdForReview) body.holdForReview = true
+  if (note.trim()) body.note = note.trim()
   return (await api.post('/transactions/transfer', body)).data
 }
 

@@ -8,7 +8,13 @@ import RecentRecipients from './RecentRecipients'
 import SelectedRecipient from './SelectedRecipient'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
 import { INSUFFICIENT_BALANCE, exceedsBalance, pesosToCentavos, sanitizeAmountInput } from '../../utils/parseAmount'
-import { APPROVAL_THRESHOLD_TEXT } from '../../utils/transferRules'
+import {
+  APPROVAL_THRESHOLD_TEXT,
+  NOTE_MAX_LENGTH,
+  NOTE_REQUIRED_MESSAGE,
+  needsApproval,
+  noteField,
+} from '../../utils/transferRules'
 
 // Fill in a recipient and an amount, then press "Transfer". It opens the
 // review step; nothing is sent from here. The first recent recipient starts picked.
@@ -18,13 +24,18 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
   const [picked, setPicked] = useState(recipients[0] ?? null)
   const [accountNumber, setAccountNumber] = useState('')
   const [amount, setAmount] = useState('')
+  const [note, setNote] = useState('')
   const [errors, setErrors] = useState({})
   const accountRef = useRef(null)
   const amountRef = useRef(null)
+  const noteRef = useRef(null)
   const focusTyped = useRef(false)
 
   // Said while the customer types, not only on submit; an empty field is never an error.
   const overBalance = exceedsBalance(amount, available)
+  // A transfer that needs bank approval also needs a reason.
+  const typedCentavos = pesosToCentavos(amount.replace(/\.$/, ''))
+  const approval = typedCentavos !== null && typedCentavos <= available && needsApproval(typedCentavos)
 
   const digits = picked ? picked.accountNumber : accountNumber.replace(/\D/g, '')
 
@@ -43,11 +54,13 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
     if (digits.length !== 12) found.accountNumber = 'Enter the 12-digit account number.'
     if (centavos === null || centavos <= 0) found.amount = 'Enter an amount greater than ₱0.00.'
     else if (centavos > available) found.amount = INSUFFICIENT_BALANCE
+    if (!found.amount && approval && !note.trim()) found.note = NOTE_REQUIRED_MESSAGE
     setErrors(found)
 
     if (found.accountNumber) return accountRef.current?.focus()
     if (found.amount) return amountRef.current?.focus()
-    onReview({ recipientAccountNumber: digits, amount: centavos })
+    if (found.note) return noteRef.current?.focus()
+    onReview({ recipientAccountNumber: digits, amount: centavos, note: note.trim() })
   }
 
   const chooseRecipient = (recipient) => {
@@ -117,6 +130,20 @@ export default function QuickTransfer({ recipients, available, frozen, onReview 
               <Amount centavos={available} sensitive mask="₱ ••••••" />
             </>
           }
+        />
+        <Input
+          ref={noteRef}
+          id="quick-note"
+          label={noteField(approval).label}
+          autoComplete="off"
+          maxLength={NOTE_MAX_LENGTH}
+          placeholder={noteField(approval).placeholder}
+          value={note}
+          onChange={(e) => {
+            setNote(e.target.value)
+            setErrors((current) => ({ ...current, note: undefined }))
+          }}
+          error={errors.note}
         />
         <p className="text-xs text-muted">
           Transfers under {APPROVAL_THRESHOLD_TEXT} go through right away. {APPROVAL_THRESHOLD_TEXT} or more needs

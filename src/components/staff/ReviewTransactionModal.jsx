@@ -9,6 +9,7 @@ import DetailsList from '../ui/DetailsList'
 import { reviewActionsFor, updateTransactionStatus } from '../../api/staff'
 import { formatDateTime } from '../../utils/formatDate'
 import { formatPeso } from '../../utils/formatPeso'
+import { needsApproval, noteLabel } from '../../utils/transferRules'
 
 // What each review action does, in the words staff see before they confirm.
 // Keys are the status each action sets (see "Transaction review rules" in
@@ -101,6 +102,7 @@ export default function ReviewTransactionModal({ tx, from, to, onClose, onReview
             ['Reference', tx.referenceNumber],
             ['Date', formatDateTime(tx.createdAt)],
             ...(tx.flagReason ? [['Reason', tx.flagReason]] : []),
+            ...(tx.note ? [[noteLabel(needsApproval(tx.amount)), tx.note]] : []),
           ]}
         />
 
