@@ -170,7 +170,8 @@ const notices = {
 // Freeze ("frozen", reason required), reactivate ("active") or close ("closed", reason
 // required). Closing is permanent and also closes the owner's user, so it needs a zero
 // balance and no pending or flagged transfers in or out (see "Closing a customer" in
-// docs/least-privilege-guide.md). A closed account can't change. Returns the updated account.
+// docs/least-privilege-guide.md). A closed account can't change. The mock returns the
+// updated account; the real freeze and reactivate routes return { id, status }.
 export const updateAccountStatus = async (id, status, reason) => {
   if (USE_MOCK) {
     if (!isStaff()) return forbidden()
@@ -209,8 +210,12 @@ export const updateAccountStatus = async (id, status, reason) => {
     notifyMock(account.owner, 'account', notices[status](account.accountNumber, why))
     return mockResponse(accountView(account))
   }
-  const body = status === 'active' ? { status } : { status, reason }
-  return (await api.patch(`/staff/accounts/${id}/status`, body)).data
+  // The backend freezes and reactivates through their own routes, and they answer
+  // data: { id, status } (the callers only read the status). It has no route for closing
+  // yet, so that keeps the agreed one until it does.
+  if (status === 'frozen') return (await api.patch(`/accounts/${id}/freeze`, { reason })).data
+  if (status === 'active') return (await api.patch(`/accounts/${id}/unfreeze`)).data
+  return (await api.patch(`/staff/accounts/${id}/status`, { status, reason })).data
 }
 
 export const getTransactions = async () => {
