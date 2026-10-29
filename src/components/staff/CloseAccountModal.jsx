@@ -64,9 +64,8 @@ export default function CloseAccountModal({ account, customerId, ownerName, onCl
         ) : (
           <>
             <p className="rounded-xl bg-status-failed px-4 py-3.5 text-sm font-semibold text-status-failed-text">
-              This can’t be undone. The bank account and the customer’s login are both closed for good. The bank
-              keeps the customer’s details for 30 days, then everything is deleted. Any transfer still waiting for
-              review must be approved or cancelled first.
+              This can’t be undone. The bank account and the customer’s login are both closed for good. Any
+              transfer still waiting for review must be approved or cancelled first.
             </p>
             <Input
               id="close-reason"
