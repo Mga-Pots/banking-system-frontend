@@ -5,6 +5,8 @@ import { scenario } from "./scenario";
 // sourceAccount and destinationAccount are account _ids.
 // cash_in has no sourceAccount (simulated funds); transfer has both.
 // performedBy is the user _id.
+// verification is only on a transfer that staff flagged: it tracks the document check the
+// sender has to go through (see docs/flagged-transfer-verification.md).
 // flagReason is null unless the transaction is flagged, or is a transfer held as
 // pending for review ("Held for staff review"). A held transfer has already been
 // taken from the sender but not yet given to the recipient.
@@ -93,6 +95,29 @@ export const transactions = [
     performedBy: "u1",
     status: "flagged",
     flagReason: "Flagged for suspicious activity",
+    verification: {
+      status: "requested",
+      requestedAt: ago({ d: 15 }),
+      submittedAt: null,
+      documentName: null,
+    },
+  }),
+  // Flagged and the sender has already sent an ID, so staff can decide
+  make("t11", { d: 2, h: 5 }, "0733", {
+    ...transfer,
+    amount: 6000000,
+    sourceAccount: "a1",
+    destinationAccount: "a3",
+    performedBy: "u1",
+    status: "flagged",
+    flagReason: "Large transfer, ID check needed",
+    note: "Payment for a second-hand car",
+    verification: {
+      status: "submitted",
+      requestedAt: ago({ d: 2, h: 4 }),
+      submittedAt: ago({ d: 1, h: 20 }),
+      documentName: "national-id-front.jpg",
+    },
   }),
   make("t10", { d: 20 }, "1203", {
     ...transfer,

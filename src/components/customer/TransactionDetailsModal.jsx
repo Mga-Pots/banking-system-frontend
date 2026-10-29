@@ -6,8 +6,16 @@ import Button from '../ui/Button'
 import CopyButton from '../ui/CopyButton'
 import StatusBadge from '../ui/StatusBadge'
 import MaskedAccount from '../ui/MaskedAccount'
+import VerifyTransferModal from './VerifyTransferModal'
 import { formatDateTime } from '../../utils/formatDate'
-import { accountIdOf, accountNumberOf, describeTransaction, isInactive } from '../../utils/transactions'
+import {
+  accountIdOf,
+  accountNumberOf,
+  describeTransaction,
+  documentCheckOf,
+  isInactive,
+  sentDocumentOf,
+} from '../../utils/transactions'
 import { needsApproval, noteLabel } from '../../utils/transferRules'
 
 const messageOf = (err) => err.response?.data?.message ?? err.message
@@ -23,14 +31,19 @@ function Row({ label, children }) {
 
 // Dialog with everything about one transaction. When `onCancel` is given, a pending
 // transfer the customer sent can be cancelled here: `onCancel(tx)` should return a
-// promise that rejects with the error to show.
-export default function TransactionDetailsModal({ tx, myAccountId, names, onClose, onCancel }) {
+// promise that rejects with the error to show. A flagged transfer the customer sent
+// shows its document check here too; `onUpdated(tx)` runs once the document has been sent.
+export default function TransactionDetailsModal({ tx, myAccountId, names, onClose, onCancel, onUpdated }) {
   const { direction, maskedTitle } = describeTransaction(tx, myAccountId, names)
   const incoming = direction === 'in'
   const inactive = isInactive(tx)
   const { showToast } = useToast()
   const amountTone = inactive ? 'text-muted line-through' : incoming ? 'text-wallet' : 'text-error'
 
+  // A flagged transfer waits on a document check. The modal keeps the latest state itself so
+  // the panel updates as soon as the ID is sent, without reloading the list behind it.
+  const [verification, setVerification] = useState(tx.verification ?? null)
+  const [verifying, setVerifying] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -47,6 +60,13 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
     tx.status === 'pending' &&
     accountIdOf(tx.sourceAccount) === myAccountId
 
+  // Only the sender goes through the document check, and only while the transfer is flagged.
+  const isSender = tx.transactionType === 'transfer' && accountIdOf(tx.sourceAccount) === myAccountId
+  const idCheck = isSender ? documentCheckOf({ ...tx, verification }) : null
+  // The document stays on the record once the transfer is approved or rejected, so a
+  // resolved transfer still shows that it went through a check.
+  const sentDocument = isSender ? sentDocumentOf({ ...tx, verification }) : null
+
   const handleCancel = async () => {
     if (busy) return
     setBusy(true)
@@ -57,6 +77,21 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
       setError(messageOf(err))
       setBusy(false)
     }
+  }
+
+  if (verifying) {
+    return (
+      <VerifyTransferModal
+        tx={tx}
+        onClose={() => setVerifying(false)}
+        onSubmitted={(updated) => {
+          setVerification(updated.verification)
+          setVerifying(false)
+          showToast('ID sent. The bank is reviewing your transfer.')
+          onUpdated?.(updated)
+        }}
+      />
+    )
   }
 
   return (
@@ -89,9 +124,33 @@ export default function TransactionDetailsModal({ tx, myAccountId, names, onClos
           </Row>
         )}
         {tx.transactionType === 'cash_in' && <Row label="Funds">Simulated, no real money</Row>}
-        {tx.flagReason && <Row label="Note">{tx.flagReason}</Row>}
+        {tx.flagReason && <Row label="Reason for flagging">{tx.flagReason}</Row>}
+        {sentDocument && (
+          <Row label="Document">
+            <span className="block">{sentDocument.name ?? 'Sent'}</span>
+            <span className="block font-normal text-muted">{formatDateTime(sentDocument.submittedAt)}</span>
+          </Row>
+        )}
         {tx.note && !incoming && <Row label={noteLabel(needsApproval(tx.amount))}>{tx.note}</Row>}
       </dl>
+
+      {idCheck?.status === 'requested' && (
+        <div className="mt-4">
+          <p className="rounded-2xl bg-status-pending px-4 py-3.5 text-sm font-semibold text-status-pending-text">
+            This transfer needs a document check before it can go through. You have already been charged, and
+            the recipient is credited once the bank approves it.
+          </p>
+          <Button className="mt-3 w-full" onClick={() => setVerifying(true)}>
+            Upload a document
+          </Button>
+        </div>
+      )}
+
+      {idCheck?.status === 'submitted' && (
+        <p className="mt-4 rounded-2xl bg-field px-4 py-3.5 text-sm text-label">
+          The bank is checking your document now. You will get a notification once it is done.
+        </p>
+      )}
 
       {canCancel && (
         <div className="mt-2">

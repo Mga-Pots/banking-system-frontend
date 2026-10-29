@@ -56,6 +56,7 @@ export default function TransactionPreview({ txId, onClose, onError }) {
       names={loaded.names}
       onClose={onClose}
       onCancel={handleCancel}
+      onUpdated={(updated) => setLoaded((current) => ({ ...current, tx: updated }))}
     />
   )
 }

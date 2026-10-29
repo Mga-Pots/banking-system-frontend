@@ -468,6 +468,10 @@ export default function History() {
           names={names}
           onClose={() => setOpenTx(null)}
           onCancel={handleCancel}
+          onUpdated={(updated) => {
+            setOpenTx(updated);
+            setReloadKey((n) => n + 1);
+          }}
         />
       )}
     </>

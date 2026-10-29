@@ -1,7 +1,9 @@
 import api from './axios'
-import { USE_MOCK, mockResponse, mockError, getMockUser } from './helpers'
+import { USE_MOCK, mockResponse, mockError, getMockUser, notifyMock } from './helpers'
 import { accounts } from '../mocks/accounts'
 import { transactions } from '../mocks/transactions'
+import { accountEnding } from '../utils/formatAccountNumber'
+import { formatPeso } from '../utils/formatPeso'
 import { pesosToCentavos } from '../utils/parseAmount'
 import { needsApproval } from '../utils/transferRules'
 
@@ -116,6 +118,14 @@ export const transfer = async ({ recipientAccountNumber, amount, note = '', hold
       ...(note.trim() && { note: note.trim() }),
     })
     transactions.unshift(tx)
+    notifyMock(
+      getMockUser()?._id,
+      'transaction',
+      held
+        ? `Your transfer of ${formatPeso(amount)} to ${accountEnding(to.accountNumber)} is being held for review.`
+        : `Your transfer of ${formatPeso(amount)} to ${accountEnding(to.accountNumber)} was completed.`,
+      tx._id,
+    )
     return mockResponse(populate(tx))
   }
   const body = { recipientAccountNumber: normalizeAccountNumber(recipientAccountNumber), amount }
@@ -239,6 +249,34 @@ export const getTransactionById = async (id) => {
     return mockResponse(populate(tx))
   }
   return (await api.get(`/transactions/${id}`)).data
+}
+
+// The sender's side of a document check on a flagged transfer: they send something that
+// shows the transfer is theirs, usually a photo of a valid ID. Only the sender can send
+// it, only while the transfer is flagged, and only once.
+// Uploading is simulated: no file is stored anywhere, only the name travels, which is all
+// the staff screens show. That keeps this to one plain JSON endpoint on the backend.
+// ASSUMPTION to confirm with the backend: the endpoint, the field name and the
+// `verification` shape (see docs/flagged-transfer-verification.md).
+export const submitTransferVerification = async (id, documentName) => {
+  if (USE_MOCK) {
+    const account = getMyMockAccount()
+    const tx = transactions.find((t) => t._id === id)
+    if (!tx || !isVisibleTo(tx, account)) return mockError('Transaction not found')
+    if (tx.transactionType !== 'transfer' || tx.sourceAccount !== account._id) {
+      return mockError('Only the sender can send a document for this transfer')
+    }
+    if (tx.status !== 'flagged') return mockError('This transfer is not waiting for a document check')
+    if (tx.verification?.status !== 'requested') {
+      return mockError('A document has already been sent for this transfer')
+    }
+    if (!documentName) return mockError('Attach a document to send')
+    const submittedAt = new Date().toISOString()
+    tx.verification = { ...tx.verification, status: 'submitted', submittedAt, documentName }
+    tx.updatedAt = submittedAt
+    return mockResponse(populate(tx))
+  }
+  return (await api.post(`/transactions/${id}/verification`, { documentName })).data
 }
 
 // Only the sender can cancel, only a pending transfer, and the amount is refunded.

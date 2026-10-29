@@ -1,5 +1,6 @@
 import { TOKEN_KEY } from './axios'
 import { users } from '../mocks/users'
+import { notifications } from '../mocks/notifications'
 import { auditLogs } from '../mocks/auditLogs'
 
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
@@ -29,6 +30,25 @@ export const mockError = (message, delay = MOCK_DELAY_MS) =>
 export const getMockUser = () => {
   const token = localStorage.getItem(TOKEN_KEY)
   return users.find((u) => u.token === token) ?? null
+}
+
+// Mock only: unique ids for the records a mock creates (notifications, audit entries).
+let mockSeq = 0
+export const nextMockId = (prefix) => `${prefix}${Date.now()}-${++mockSeq}`
+
+// Mock only: gives `recipient` a notification, newest first, the way the backend does.
+export const notifyMock = (recipient, type, message, relatedTransaction = null) => {
+  const createdAt = new Date().toISOString()
+  notifications.unshift({
+    _id: nextMockId('n'),
+    recipient,
+    type,
+    message,
+    relatedTransaction,
+    isRead: false,
+    createdAt,
+    updatedAt: createdAt,
+  })
 }
 
 // Removes the token before a user object is returned from a mock.

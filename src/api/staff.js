@@ -1,12 +1,12 @@
 import api from './axios'
-import { USE_MOCK, mockResponse, mockError, getMockUser } from './helpers'
+import { USE_MOCK, mockResponse, mockError, getMockUser, nextMockId, notifyMock } from './helpers'
 import { users } from '../mocks/users'
 import { accounts } from '../mocks/accounts'
 import { transactions } from '../mocks/transactions'
-import { notifications } from '../mocks/notifications'
 import { auditLogs } from '../mocks/auditLogs'
 import { accountEnding } from '../utils/formatAccountNumber'
 import { formatPeso } from '../utils/formatPeso'
+import { documentCheckOf } from '../utils/transactions'
 
 // Staff-only endpoints (/staff/*), from docs/least-privilege-guide.md. Staff verify
 // customers, freeze, reactivate or close bank accounts, and approve, flag or cancel transfers.
@@ -19,10 +19,6 @@ import { formatPeso } from '../utils/formatPeso'
 //   populated as { _id, name, email }. Transactions carry each account as
 //   { _id, accountNumber }, like the customer responses.
 
-// Mock only: unique ids for the notifications and audit entries the mock creates.
-let mockSeq = 0
-const nextId = (prefix) => `${prefix}${Date.now()}-${++mockSeq}`
-
 const isStaff = () => getMockUser()?.role === 'staff'
 const forbidden = () => mockError('Forbidden')
 
@@ -30,7 +26,7 @@ const now = () => new Date().toISOString()
 
 const logMock = (action, targetType, targetId) =>
   auditLogs.push({
-    _id: nextId('l'),
+    _id: nextMockId('l'),
     actor: getMockUser()?._id ?? null,
     action,
     targetType,
@@ -39,20 +35,6 @@ const logMock = (action, targetType, targetId) =>
   })
 
 // Notification messages never contain a full account number ("account ending 1234").
-const notifyMock = (recipient, type, message, relatedTransaction = null) => {
-  const createdAt = now()
-  notifications.unshift({
-    _id: nextId('n'),
-    recipient,
-    type,
-    message,
-    relatedTransaction,
-    isRead: false,
-    createdAt,
-    updatedAt: createdAt,
-  })
-}
-
 const accountOf = (userId) => accounts.find((a) => a.owner === userId)
 
 // The fields a staff member sees about a customer (no role, preferences or token).
@@ -241,7 +223,11 @@ export const getTransactions = async () => {
 export const reviewActionsFor = (tx) => {
   if (tx.transactionType !== 'transfer') return []
   if (tx.status === 'pending') return ['completed', 'flagged', 'cancelled']
-  if (tx.status === 'flagged') return ['completed', 'cancelled']
+  // A flagged transfer is waiting on the sender's document. It can only be approved once
+  // that is in; rejecting stays open, so a sender who never answers can't leave it stuck.
+  if (tx.status === 'flagged') {
+    return documentCheckOf(tx)?.status === 'submitted' ? ['completed', 'cancelled'] : ['cancelled']
+  }
   return []
 }
 
@@ -262,7 +248,7 @@ export const updateTransactionStatus = async (id, status, reason) => {
       return mockError(
         status === 'flagged'
           ? 'Only pending transfers can be flagged'
-          : 'Only pending or flagged transfers can be approved or cancelled',
+          : 'This transfer is waiting for the sender’s document, so it can only be rejected',
       )
     }
     const why = reason?.trim()
@@ -292,7 +278,15 @@ export const updateTransactionStatus = async (id, status, reason) => {
       from.updatedAt = changedAt
       notifyMock(from.owner, 'transaction', `Your transfer of ${amount} was cancelled and refunded to your account.`, tx._id)
     } else {
-      notifyMock(from.owner, 'transaction', `Your transfer of ${amount} is under review.`, tx._id)
+      // Flagging starts a document check: the money stays put until the customer sends a
+      // document and staff approve or reject it.
+      tx.verification = { status: 'requested', requestedAt: changedAt, submittedAt: null, documentName: null }
+      notifyMock(
+        from.owner,
+        'transaction',
+        `Your transfer of ${amount} needs a document check before it can go through. Open it to send one.`,
+        tx._id,
+      )
     }
 
     tx.status = status

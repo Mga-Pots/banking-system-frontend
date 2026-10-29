@@ -27,3 +27,19 @@ export const describeTransaction = (tx, myAccountId, names = {}) => {
   const maskedTitle = title
   return { direction: incoming ? 'in' : 'out', title, maskedTitle }
 }
+
+// The document check on a flagged transfer, or null when there isn't one. Flagging always
+// starts a check, so a flagged transfer with no `verification` on it is one we asked for
+// and haven't had an answer to: that is what a backend without the field looks like
+// (see docs/flagged-transfer-verification.md).
+export const documentCheckOf = (tx) =>
+  tx.status === 'flagged' && tx.transactionType === 'transfer'
+    ? (tx.verification ?? { status: 'requested', requestedAt: null, submittedAt: null, documentName: null })
+    : null
+
+// The document the sender actually sent, or null. Unlike documentCheckOf this outlives the
+// transfer being approved or rejected, so a resolved transfer still shows it was checked.
+export const sentDocumentOf = (tx) =>
+  tx.verification?.status === 'submitted'
+    ? { name: tx.verification.documentName ?? null, submittedAt: tx.verification.submittedAt ?? null }
+    : null

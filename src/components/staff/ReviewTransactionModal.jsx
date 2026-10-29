@@ -8,6 +8,7 @@ import { CheckIcon, CloseIcon, FlagIcon } from '../ui/Icons'
 import DetailsList from '../ui/DetailsList'
 import { reviewActionsFor, updateTransactionStatus } from '../../api/staff'
 import { formatDateTime } from '../../utils/formatDate'
+import { documentCheckOf, sentDocumentOf } from '../../utils/transactions'
 import { formatPeso } from '../../utils/formatPeso'
 import { needsApproval, noteLabel } from '../../utils/transferRules'
 
@@ -28,7 +29,7 @@ const ACTIONS = {
     icon: FlagIcon,
     variant: 'secondary',
     explain: () =>
-      'No money moves. The transfer stays on hold until it’s approved or cancelled, and the sender is told it’s under review.',
+      'No money moves. The sender is asked to send a document, and the transfer stays on hold until it’s approved or rejected.',
     confirm: 'Flag transfer',
     reasonLabel: 'Reason',
     reasonRequired: true,
@@ -59,6 +60,10 @@ export default function ReviewTransactionModal({ tx, from, to, onClose, onReview
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // A flagged transfer waits on the sender's document before staff decide either way.
+  const idCheck = documentCheckOf(tx)
+  // Kept after the transfer resolves, so a reviewed transfer still shows what was checked.
+  const sentDocument = sentDocumentOf(tx)
   const isTransfer = tx.transactionType === 'transfer'
   const picked = choice && ACTIONS[choice]
 
@@ -103,6 +108,18 @@ export default function ReviewTransactionModal({ tx, from, to, onClose, onReview
             ['Date', formatDateTime(tx.createdAt)],
             ...(tx.flagReason ? [['Reason', tx.flagReason]] : []),
             ...(tx.note ? [[noteLabel(needsApproval(tx.amount)), tx.note]] : []),
+            ...(sentDocument
+              ? [['Document', `${sentDocument.name ?? 'Sent'}, sent ${formatDateTime(sentDocument.submittedAt)}`]]
+              : idCheck
+                ? [
+                    [
+                      'Document',
+                      idCheck.requestedAt
+                        ? `Asked for on ${formatDateTime(idCheck.requestedAt)}`
+                        : 'Waiting for the sender’s document',
+                    ],
+                  ]
+                : []),
           ]}
         />
 
@@ -113,9 +130,21 @@ export default function ReviewTransactionModal({ tx, from, to, onClose, onReview
             <p className="text-sm text-label">
               {tx.status === 'pending'
                 ? 'The sender has already been charged. The recipient is credited only when you approve it.'
-                : 'This transfer is flagged. The sender has already been charged; approve it to credit the recipient, or cancel it to refund the sender.'}
+                : idCheck?.status === 'submitted'
+                  ? 'This transfer is flagged. The sender has already been charged; approve it to credit the recipient, or reject it to refund the sender.'
+                  : 'This transfer is flagged and waiting on the sender’s document. The sender has already been charged, so rejecting refunds them.'}
             </p>
-            <div className={`grid gap-3 ${actions.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+            {idCheck?.status === 'submitted' && (
+              <p className="rounded-xl bg-status-completed px-4 py-3.5 text-sm font-semibold text-status-completed-text">
+                Check the document above against the name on the account before you approve.
+              </p>
+            )}
+            {idCheck?.status === 'requested' && (
+              <p className="rounded-xl bg-status-pending px-4 py-3.5 text-sm font-semibold text-status-pending-text">
+                The sender hasn’t sent a document yet, so this can’t be approved. Reject it if they never do.
+              </p>
+            )}
+            <div className={`grid gap-3 ${actions.length === 3 ? 'sm:grid-cols-3' : actions.length === 2 ? 'sm:grid-cols-2' : ''}`}>
               {actions.map((key) => {
                 const { label, icon: Icon, variant } = ACTIONS[key]
                 return (

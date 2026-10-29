@@ -353,6 +353,10 @@ export default function CustomerDashboard() {
           names={names}
           onClose={() => setOpenTx(null)}
           onCancel={handleCancel}
+          onUpdated={(updated) => {
+            setOpenTx(updated);
+            load();
+          }}
         />
       )}
       {detailsOpen && (
