@@ -5,10 +5,8 @@ import Button from '../../components/ui/Button'
 import Skeleton from '../../components/ui/Skeleton'
 import ErrorState, { ServerMessage } from '../../components/ui/ErrorState'
 import Weave from '../../components/ui/Weave'
-import { useToast } from '../../components/ui/Toast'
 import { ChevronDownIcon, KeyIcon, LockIcon, ShieldIcon, UserPlusIcon, UsersIcon } from '../../components/ui/Icons'
 import { Avatar, StatCard, Tag } from '../../components/admin/AdminBits'
-import CreateStaffModal from '../../components/admin/CreateStaffModal'
 import { useAuth } from '../../context/AuthContext'
 import { getAuditLogs, getNotificationLogs, getUsers } from '../../api/admin'
 import { ACCESS_ACTIONS, TYPE_LABELS, describeLog } from '../../utils/auditText'
@@ -45,9 +43,7 @@ function SectionError({ title, section, onRetry }) {
 // shows an error in the parts that need it.
 export default function AdminDashboard() {
   const { user: me } = useAuth()
-  const { showToast } = useToast()
   const [sections, setSections] = useState({ users: LOADING, logs: LOADING, notifs: LOADING })
-  const [creating, setCreating] = useState(false)
 
   const load = useCallback(
     () =>
@@ -141,11 +137,11 @@ export default function AdminDashboard() {
                 )}
               </div>
               <div className="flex flex-wrap gap-3">
-                <Button variant="accent" size="lg" onClick={() => setCreating(true)}>
+                <Button variant="accent" size="lg" to="/admin/create-staff">
                   <UserPlusIcon size={18} />
                   Create staff
                 </Button>
-                <Button variant="ghost" size="lg" to="/admin/staff">
+                <Button variant="ghost" size="lg" to="/admin/users">
                   <UsersIcon size={18} />
                   Manage staff
                 </Button>
@@ -301,16 +297,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {creating && (
-        <CreateStaffModal
-          onClose={() => setCreating(false)}
-          onCreated={(s) => {
-            setCreating(false)
-            showToast(`Staff account created for ${s.name}.`)
-            load()
-          }}
-        />
-      )}
     </>
   )
 }

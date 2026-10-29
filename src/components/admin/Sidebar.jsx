@@ -8,7 +8,7 @@ const groups = [
     links: [
       { to: '/admin', label: 'Overview', icon: GridIcon, end: true },
       { to: '/admin/users', label: 'Users', icon: UsersIcon },
-      { to: '/admin/staff', label: 'Staff', icon: UserPlusIcon },
+      { to: '/admin/create-staff', label: 'Create staff', icon: UserPlusIcon },
       { to: '/admin/audit-log', label: 'Audit log', icon: ClipboardIcon },
       { to: '/admin/notification-log', label: 'Notification log', icon: BellIcon },
     ],

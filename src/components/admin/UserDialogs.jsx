@@ -1,4 +1,3 @@
-import CreateStaffModal from './CreateStaffModal'
 import UserStatusModal from './UserStatusModal'
 
 
@@ -6,9 +5,6 @@ import UserStatusModal from './UserStatusModal'
 // `done(message)` closes it, shows a toast, and reloads.
 export default function UserDialogs({ dialog, onClose, done }) {
   if (!dialog) return null
-  if (dialog.type === 'staff') {
-    return <CreateStaffModal onClose={onClose} onCreated={(s) => done(`Staff account created for ${s.name}.`)} />
-  }
   if (dialog.type === 'close') {
     return (
       <UserStatusModal

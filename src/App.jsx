@@ -19,7 +19,7 @@ import StaffAccounts from './pages/staff/Accounts'
 import StaffTransactions from './pages/staff/Transactions'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminUsers from './pages/admin/Users'
-import AdminStaff from './pages/admin/Staff'
+import AdminCreateStaff from './pages/admin/CreateStaff'
 import AdminAuditLog from './pages/admin/AuditLog'
 import AdminNotificationLog from './pages/admin/NotificationLog'
 
@@ -64,7 +64,7 @@ export default function App() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="users" element={<AdminUsers />} />
-              <Route path="staff" element={<AdminStaff />} />
+              <Route path="create-staff" element={<AdminCreateStaff />} />
               <Route path="audit-log" element={<AdminAuditLog />} />
               <Route path="notification-log" element={<AdminNotificationLog />} />
               <Route path="*" element={<Navigate to="/admin" replace />} />
