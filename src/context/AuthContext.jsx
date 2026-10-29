@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import * as authApi from '../api/auth'
 import { TOKEN_KEY } from '../api/axios'
 
@@ -37,14 +37,42 @@ export function AuthProvider({ children }) {
     [persist],
   )
 
-  const logout = useCallback(() => {
-    // Tell the backend (best effort); the client token is cleared regardless.
-    authApi.logout(token).catch(() => {})
+  const clearSession = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
     setToken(null)
     setUser(null)
-  }, [token])
+  }, [])
+
+  const logout = useCallback(() => {
+    // Tell the backend (best effort); the client token is cleared regardless.
+    authApi.logout(token).catch(() => {})
+    clearSession()
+  }, [token, clearSession])
+
+  // On page load, the saved user is only a copy from the last login. Ask the backend
+  // for the current one (staff may have verified the customer since, for example),
+  // and end the session if the backend no longer accepts the token. If the backend
+  // can't be reached, keep the saved copy.
+  useEffect(() => {
+    if (!localStorage.getItem(TOKEN_KEY)) return
+    let stale = false
+    authApi
+      .getMe()
+      .then((res) => {
+        if (stale) return
+        localStorage.setItem(USER_KEY, JSON.stringify(res.data))
+        setUser(res.data)
+      })
+      .catch((err) => {
+        if (stale || !err.response) return
+        const status = err.response.status
+        if (!status || status === 401 || status === 403) clearSession()
+      })
+    return () => {
+      stale = true
+    }
+  }, [clearSession])
 
   const value = useMemo(
     () => ({ user, token, role: user?.role ?? null, login, register, logout }),
