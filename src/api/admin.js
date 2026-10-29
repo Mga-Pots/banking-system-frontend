@@ -4,11 +4,9 @@ import { users } from '../mocks/users'
 import { notifications } from '../mocks/notifications'
 import { auditLogs } from '../mocks/auditLogs'
 
-// Admin = IT and people: staff accounts, user access, password resets for customers,
+// Admin = IT and people: create and close staff accounts, see the user list (read-only),
 // and read-only review of the audit and notification logs. No money data at all.
 // Banking operations live in ./staff.js. See CLAUDE.md for the rules.
-
-const USER_STATUSES = ['active', 'deactivated', 'disabled', 'closed']
 
 // The admin user list only gets identity and access fields (data minimization).
 const IDENTITY_FIELDS = ['_id', 'name', 'email', 'contactNumber', 'role', 'status', 'isVerified', 'createdAt', 'updatedAt']
@@ -16,14 +14,6 @@ const identityOnly = (user) => Object.fromEntries(IDENTITY_FIELDS.filter((f) => 
 
 // The admin notification log is metadata only: the message can contain amounts.
 const notificationMeta = ({ _id, recipient, type, isRead, createdAt }) => ({ _id, recipient, type, isRead, createdAt })
-
-// Readable, but not guessable: 12 letters and digits in 3 groups (no 0/O, 1/l/I).
-const tempPassword = () => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
-  const bytes = crypto.getRandomValues(new Uint32Array(12))
-  const raw = Array.from(bytes, (n) => chars[n % chars.length]).join('')
-  return `${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8)}`
-}
 
 export const createStaff = async ({ name, email, password }) => {
   if (USE_MOCK) {
@@ -64,45 +54,22 @@ export const getUserById = async (id) => {
   return (await api.get(`/admin/users/${id}`)).data
 }
 
-// Activate, disable or close. Admins can't change their own status.
+// Close a staff account: PATCH /admin/users/:id/status with { status: "closed" } only.
+// Disable / re-enable is gone; customers are closed by staff via their bank account.
 export const updateUserStatus = async (id, status) => {
   if (USE_MOCK) {
     const user = users.find((u) => u._id === id)
     if (!user) return mockError('User not found')
     if (id === getMockUser()?._id) return mockError('You can’t change your own account status')
-    if (!USER_STATUSES.includes(status)) return mockError('Invalid status')
-    if (user.status === 'closed') return mockError('Closed accounts can’t be changed')
+    if (status !== 'closed') return mockError('Admins can only close staff accounts')
+    if (user.role !== 'staff') return mockError('Only staff accounts can be closed here')
+    if (user.status === 'closed') return mockError('This account is already closed')
     user.status = status
     user.updatedAt = new Date().toISOString()
     logMock('user.status_update', 'User', id)
     return mockResponse(identityOnly(user))
   }
   return (await api.patch(`/admin/users/${id}/status`, { status })).data
-}
-
-// Customers only (open decision 4, option A). Returns { temporaryPassword } once;
-// the user must set a new password at their next login.
-export const resetPassword = async (id) => {
-  if (USE_MOCK) {
-    const user = users.find((u) => u._id === id)
-    if (!user) return mockError('User not found')
-    if (user.role !== 'customer') return mockError('Only customer passwords can be reset here')
-    user.mustChangePassword = true
-    user.updatedAt = new Date().toISOString()
-    logMock('user.password_reset', 'User', id)
-    notifications.push({
-      _id: `n${Date.now()}`,
-      recipient: id,
-      type: 'security',
-      message: 'Your password was reset by an admin. Please set a new one when you log in.',
-      relatedTransaction: null,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    })
-    return mockResponse({ temporaryPassword: tempPassword() })
-  }
-  return (await api.patch(`/admin/users/${id}/reset-password`)).data
 }
 
 export const getAuditLogs = async () => {

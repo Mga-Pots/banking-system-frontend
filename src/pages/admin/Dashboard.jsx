@@ -5,10 +5,8 @@ import Button from '../../components/ui/Button'
 import Skeleton from '../../components/ui/Skeleton'
 import ErrorState, { ServerMessage } from '../../components/ui/ErrorState'
 import Weave from '../../components/ui/Weave'
-import { useToast } from '../../components/ui/Toast'
-import { ChevronDownIcon, KeyIcon, LockIcon, ShieldIcon, UserPlusIcon } from '../../components/ui/Icons'
+import { ChevronDownIcon, KeyIcon, LockIcon, ShieldIcon, UserPlusIcon, UsersIcon } from '../../components/ui/Icons'
 import { Avatar, StatCard, Tag } from '../../components/admin/AdminBits'
-import CreateStaffModal from '../../components/admin/CreateStaffModal'
 import { useAuth } from '../../context/AuthContext'
 import { getAuditLogs, getNotificationLogs, getUsers } from '../../api/admin'
 import { ACCESS_ACTIONS, TYPE_LABELS, describeLog } from '../../utils/auditText'
@@ -45,9 +43,7 @@ function SectionError({ title, section, onRetry }) {
 // shows an error in the parts that need it.
 export default function AdminDashboard() {
   const { user: me } = useAuth()
-  const { showToast } = useToast()
   const [sections, setSections] = useState({ users: LOADING, logs: LOADING, notifs: LOADING })
-  const [creating, setCreating] = useState(false)
 
   const load = useCallback(
     () =>
@@ -141,13 +137,13 @@ export default function AdminDashboard() {
                 )}
               </div>
               <div className="flex flex-wrap gap-3">
-                <Button variant="accent" size="lg" onClick={() => setCreating(true)}>
+                <Button variant="accent" size="lg" to="/admin/create-staff">
                   <UserPlusIcon size={18} />
                   Create staff
                 </Button>
                 <Button variant="ghost" size="lg" to="/admin/users">
-                  <KeyIcon size={18} />
-                  Reset a password
+                  <UsersIcon size={18} />
+                  Manage staff
                 </Button>
               </div>
             </div>
@@ -162,9 +158,8 @@ export default function AdminDashboard() {
               {/* Each row: label, value, and whether its data is missing (loading or failed) */}
               {[
                 ['New sign-ups', byRole('customer').filter((u) => isToday(u.createdAt)).length, !sections.users.data],
-                ['Password resets', countLogs('user.password_reset', isToday), !sections.logs.data],
                 ['Staff created', countLogs('staff.create', isToday), !sections.logs.data],
-                ['Access changes', countLogs('user.status_update', isToday), !sections.logs.data],
+                ['Staff closed', countLogs('user.status_update', isToday), !sections.logs.data],
               ].map(([label, value, missing]) => (
                 <div key={label} className="flex items-center justify-between text-sm">
                   <span className="text-white/80">{label}</span>
@@ -179,7 +174,7 @@ export default function AdminDashboard() {
             <StatCard
               label="Staff accounts"
               value={staff.length}
-              hint={`${staff.filter((u) => u.status === 'active').length} active, ${staff.filter((u) => u.status !== 'active').length} off`}
+              hint={`${staff.filter((u) => u.status === 'active').length} active, ${staff.filter((u) => u.status === 'closed').length} closed`}
               loading={usersLoading}
               failed={usersFailed}
             />
@@ -191,15 +186,15 @@ export default function AdminDashboard() {
               failed={usersFailed}
             />
             <StatCard
-              label="Can’t log in"
-              value={users.filter((u) => u.status === 'disabled' || u.status === 'closed').length}
-              hint="Disabled or closed"
+              label="Closed accounts"
+              value={users.filter((u) => u.status === 'closed').length}
+              hint="Can’t log in anymore"
               loading={usersLoading}
               failed={usersFailed}
             />
             <StatCard
-              label="Password resets"
-              value={countLogs('user.password_reset', (d) => withinDays(d, 7))}
+              label="Staff closed"
+              value={countLogs('user.status_update', (d) => withinDays(d, 7))}
               hint="This week"
               loading={logsLoading}
               failed={logsFailed}
@@ -302,16 +297,6 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {creating && (
-        <CreateStaffModal
-          onClose={() => setCreating(false)}
-          onCreated={(s) => {
-            setCreating(false)
-            showToast(`Staff account created for ${s.name}.`)
-            load()
-          }}
-        />
-      )}
     </>
   )
 }

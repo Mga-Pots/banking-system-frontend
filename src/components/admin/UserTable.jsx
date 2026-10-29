@@ -11,8 +11,9 @@ const shortDate = (iso) =>
 
 // Identity and access only: name, email, role, status, ID check, joined.
 // No balances or account numbers. `onPick(action, user)` opens a dialog.
-// `showIdCheck` is off on the Staff page (staff don't need an ID check).
-export default function UserTable({ users, meId, onPick, showIdCheck = true, empty = 'No users match these filters.' }) {
+// `showIdCheck` is off for staff and admins (they don't need an ID check).
+// `manage` shows the Manage button on staff rows (only on the Staff tab).
+export default function UserTable({ users, meId, onPick, showIdCheck = true, manage = false, empty = 'No users match these filters.' }) {
   const [page, setPage] = useState(1)
   const totalPages = Math.max(1, Math.ceil(users.length / PAGE_SIZE))
   const current = Math.min(page, totalPages)
@@ -28,16 +29,18 @@ export default function UserTable({ users, meId, onPick, showIdCheck = true, emp
               <th scope="col" className="w-[110px] py-3 pr-4 font-bold">Role</th>
               <th scope="col" className="w-[130px] py-3 pr-4 font-bold">Status</th>
               {showIdCheck && <th scope="col" className="w-[130px] py-3 pr-4 font-bold">ID check</th>}
-              <th scope="col" className="w-[130px] py-3 pr-4 font-bold">Joined</th>
-              <th scope="col" className="w-[130px] py-3 font-bold">
-                <span className="sr-only">Actions</span>
-              </th>
+              <th scope="col" className={`w-[130px] py-3 font-bold ${manage ? 'pr-4' : 'text-right'}`}>Joined</th>
+              {manage && (
+                <th scope="col" className="w-[130px] py-3 font-bold">
+                  <span className="sr-only">Actions</span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {shown.length === 0 && (
               <tr className="border-t border-divider">
-                <td colSpan={6} className="py-10 text-center text-muted">
+                <td colSpan={4 + (showIdCheck ? 1 : 0) + (manage ? 1 : 0)} className="py-10 text-center text-muted">
                   {empty}
                 </td>
               </tr>
@@ -45,7 +48,7 @@ export default function UserTable({ users, meId, onPick, showIdCheck = true, emp
             {shown.map((u) => {
               const isMe = u._id === meId
               // Admins can't manage themselves or other admins, and closed accounts are final.
-              const canManage = !isMe && u.role !== 'admin' && u.status !== 'closed'
+              const canManage = manage && !isMe && u.role === 'staff' && u.status !== 'closed' // admins only manage staff
               return (
                 <tr key={u._id} className="border-t border-divider">
                   <td className="py-3.5 pr-4">
@@ -69,12 +72,14 @@ export default function UserTable({ users, meId, onPick, showIdCheck = true, emp
                       <IdCheck user={u} />
                     </td>
                   )}
-                  <td className="py-3.5 pr-4 text-sm text-muted">{shortDate(u.createdAt)}</td>
-                  <td className="py-3.5">
-                    <div className="flex justify-end">
-                      {canManage && <ManageMenu user={u} onPick={(action) => onPick(action, u)} />}
-                    </div>
-                  </td>
+                  <td className={`py-3.5 text-sm text-muted ${manage ? 'pr-4' : 'text-right'}`}>{shortDate(u.createdAt)}</td>
+                  {manage && (
+                    <td className="py-3.5">
+                      <div className="flex justify-end">
+                        {canManage && <ManageMenu user={u} onPick={(action) => onPick(action, u)} />}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               )
             })}

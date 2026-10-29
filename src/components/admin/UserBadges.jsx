@@ -3,11 +3,11 @@ const pill = 'inline-flex rounded-full px-3 py-1 text-xs font-bold whitespace-no
 const statusStyles = {
   active: ['Active', 'bg-status-completed text-status-completed-text'],
   deactivated: ['Deactivated', 'bg-status-cancelled text-status-cancelled-text'],
-  disabled: ['Disabled', 'bg-status-failed text-status-failed-text'],
   closed: ['Closed', 'bg-status-cancelled text-status-cancelled-text'],
 }
 
-// User account standing: active, deactivated (by the customer), disabled or closed (by an admin).
+// User account standing: active, deactivated (by the customer), or closed (staff by an admin,
+// customers by staff when their bank account is closed).
 export function UserStatus({ status }) {
   const [text, style] = statusStyles[status] ?? [status, statusStyles.closed[1]]
   return <span className={`${pill} ${style}`}>{text}</span>
