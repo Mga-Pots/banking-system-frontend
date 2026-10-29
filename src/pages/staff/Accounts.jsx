@@ -245,6 +245,7 @@ export default function StaffAccounts() {
       {closing && (
         <CloseAccountModal
           account={closing}
+          customerId={closing.owner?._id}
           ownerName={closing.owner?.name}
           onClose={() => setClosing(null)}
           onClosed={() => {

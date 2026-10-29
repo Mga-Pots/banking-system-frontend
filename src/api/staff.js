@@ -211,11 +211,20 @@ export const updateAccountStatus = async (id, status, reason) => {
     return mockResponse(accountView(account))
   }
   // The backend freezes and reactivates through their own routes, and they answer
-  // data: { id, status } (the callers only read the status). It has no route for closing
-  // yet, so that keeps the agreed one until it does.
+  // data: { id, status } (the callers only read the status). Closing goes through
+  // closeCustomerAccount below.
   if (status === 'frozen') return (await api.patch(`/accounts/${id}/freeze`, { reason })).data
-  if (status === 'active') return (await api.patch(`/accounts/${id}/unfreeze`)).data
-  return (await api.patch(`/staff/accounts/${id}/status`, { status, reason })).data
+  return (await api.patch(`/accounts/${id}/unfreeze`)).data
+}
+
+// Closes the customer's bank account and login together. The backend does this on the
+// customer (PATCH /staff/customers/:id/status), not on the account, so it needs the
+// owner's id as well as the account's. The backend reads only { status }, ignores the
+// reason, and answers with the updated user. It doesn't check the balance or held
+// transfers yet, so only the mock refuses those.
+export const closeCustomerAccount = async (customerId, accountId, reason) => {
+  if (USE_MOCK) return updateAccountStatus(accountId, 'closed', reason)
+  return (await api.patch(`/staff/customers/${customerId}/status`, { status: 'closed', reason })).data
 }
 
 export const getTransactions = async () => {

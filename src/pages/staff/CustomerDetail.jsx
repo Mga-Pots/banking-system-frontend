@@ -198,6 +198,7 @@ export default function StaffCustomerDetail() {
       {dialog === 'close' && account && (
         <CloseAccountModal
           account={account}
+          customerId={customer._id}
           ownerName={customer.name}
           onClose={() => setDialog(null)}
           onClosed={() => done(`${customer.name}’s account is closed.`)}

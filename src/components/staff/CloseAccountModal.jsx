@@ -4,7 +4,7 @@ import Button from '../ui/Button'
 import Input from '../ui/Input'
 import Amount from '../ui/Amount'
 import DetailsList from '../ui/DetailsList'
-import { updateAccountStatus } from '../../api/staff'
+import { closeCustomerAccount } from '../../api/staff'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
 
 // Permanently closes a customer: their bank account and their login together
@@ -12,8 +12,9 @@ import { formatAccountNumber } from '../../utils/formatAccountNumber'
 // ₱0.00 and no transfer can be waiting in either direction; the second rule is only
 // known to the server, so its refusal is shown as the error. To confirm, staff type the
 // account's number, so they can't close the wrong one by habit.
-// `account` needs _id, accountNumber and balance; `ownerName` is shown for context.
-export default function CloseAccountModal({ account, ownerName, onClose, onClosed }) {
+// `account` needs _id, accountNumber and balance; `customerId` is the owner's id, which
+// the close route needs; `ownerName` is shown for context.
+export default function CloseAccountModal({ account, customerId, ownerName, onClose, onClosed }) {
   const [reason, setReason] = useState('')
   const [reasonError, setReasonError] = useState('')
   const [typed, setTyped] = useState('')
@@ -31,7 +32,7 @@ export default function CloseAccountModal({ account, ownerName, onClose, onClose
     }
     setSaving(true)
     try {
-      const res = await updateAccountStatus(account._id, 'closed', reason.trim())
+      const res = await closeCustomerAccount(customerId, account._id, reason.trim())
       onClosed(res.data)
     } catch (err) {
       setError(err.response?.data?.message ?? err.message)
