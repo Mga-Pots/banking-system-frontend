@@ -80,7 +80,7 @@ export default function AdminNotificationLog() {
         <div className="flex flex-col gap-3 pb-3 lg:flex-row">
           <SearchInput id="notif-search" label="Search recipient" value={search} onChange={filterBy(setSearch)} placeholder="Search recipient" />
           <FilterSelect id="type-filter" label="Type" value={type} onChange={filterBy(setType)}>
-            <option value="any">Type: Any</option>
+            <option value="any">Type: All</option>
             {Object.entries(TYPES).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
@@ -88,7 +88,7 @@ export default function AdminNotificationLog() {
             ))}
           </FilterSelect>
           <FilterSelect id="read-filter" label="Read" value={read} onChange={filterBy(setRead)}>
-            <option value="any">Read: Any</option>
+            <option value="any">Read: All</option>
             <option value="unread">Unread</option>
             <option value="read">Read</option>
           </FilterSelect>

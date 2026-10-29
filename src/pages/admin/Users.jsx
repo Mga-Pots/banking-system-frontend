@@ -103,14 +103,14 @@ export default function AdminUsers() {
         <div className="flex flex-col gap-3 pb-5 sm:flex-row">
           <SearchInput id="user-search" label="Search users" value={search} onChange={setSearch} placeholder="Search name, email, or contact number" />
           <FilterSelect id="status-filter" label="Status" value={statusFilter} onChange={setStatusFilter}>
-            <option value="any">Status: Any</option>
+            <option value="any">Status: All</option>
             <option value="active">Active</option>
             <option value="deactivated">Deactivated</option>
             <option value="disabled">Disabled</option>
             <option value="closed">Closed</option>
           </FilterSelect>
           <FilterSelect id="id-filter" label="ID check" value={idFilter} onChange={setIdFilter}>
-            <option value="any">ID check: Any</option>
+            <option value="any">ID check: All</option>
             <option value="verified">Verified</option>
             <option value="unverified">Unverified</option>
           </FilterSelect>

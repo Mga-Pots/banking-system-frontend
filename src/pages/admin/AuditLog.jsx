@@ -79,7 +79,7 @@ export default function AdminAuditLog() {
         <div className="flex flex-col gap-3 pb-5 lg:flex-row">
           <SearchInput id="audit-search" label="Search the audit log" value={search} onChange={filterBy(setSearch)} placeholder="Search by name or ID" />
           <FilterSelect id="action-filter" label="Action" value={action} onChange={filterBy(setAction)}>
-            <option value="any">Action: Any</option>
+            <option value="any">Action: All</option>
             {Object.entries(ACTION_LABELS).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}

@@ -22,8 +22,8 @@ const PAGE_SIZE = 10
 const needsReview = (tx) => reviewActionsFor(tx).length > 0
 
 const TABS = [
-  ['review', 'Needs review'],
   ['all', 'All'],
+  ['review', 'Needs review'],
   ['completed', 'Completed'],
   ['pending', 'Pending'],
   ['flagged', 'Flagged'],
@@ -151,7 +151,7 @@ export default function StaffTransactions() {
             />
           </div>
           <FilterSelect id="type-filter" label="Type" value={type} onChange={filterBy(setType)}>
-            <option value="any">Type: Any</option>
+            <option value="any">Type: All</option>
             <option value="transfer">Transfers</option>
             <option value="cash_in">Cash ins</option>
           </FilterSelect>

@@ -89,7 +89,7 @@ export default function StaffCustomers() {
             />
           </div>
           <FilterSelect id="id-filter" label="ID check" value={idFilter} onChange={filterBy(setIdFilter)}>
-            <option value="any">ID check: Any</option>
+            <option value="any">ID check: All</option>
             <option value="unverified">Unverified</option>
             <option value="verified">Verified</option>
           </FilterSelect>
