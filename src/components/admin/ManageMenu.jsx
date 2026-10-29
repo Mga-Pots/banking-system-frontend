@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDownIcon, KeyIcon, SnowIcon } from '../ui/Icons'
+import { ChevronDownIcon, SnowIcon } from '../ui/Icons'
 
 const item =
   'flex w-full cursor-pointer items-start gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-ground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-wallet'
 
-// "Manage" button with a small menu. Customers: reset password. Staff: close the staff
-// account. Admins don't disable or close customers (staff close their bank account instead).
-// `onPick(action)` gets "reset" | "close".
+// "Manage" button on staff rows only: close the staff account. Admins don't manage
+// customers at all (staff handle them). `onPick(action)` gets "close".
 export default function ManageMenu({ user, onPick }) {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState(null) // where the menu floats, so a scrolling table can't cut it off
@@ -68,29 +67,15 @@ export default function ManageMenu({ user, onPick }) {
 
       {open && pos && (
         <div style={pos} className="fixed z-30 w-72 rounded-2xl bg-white p-2 text-left shadow-xl ring-1 ring-divider">
-          {user.role === 'customer' ? (
-            <button type="button" className={item} onClick={() => pick('reset')}>
-              <KeyIcon size={18} className="mt-0.5 shrink-0 text-ink" />
-              <span>
-                <span className="block text-sm font-semibold text-text">Reset password</span>
-                <span className="block text-xs text-muted">Shows a temporary password once</span>
-              </span>
-            </button>
-          ) : (
-            <>
-              <p className="px-3 pt-2 pb-3 text-xs text-muted">
-                Staff passwords are reset by the team with the seed script.
-              </p>
-              <div className="my-1 border-t border-divider" />
-              <button type="button" className={item} onClick={() => pick('close')}>
-                <SnowIcon size={18} className="mt-0.5 shrink-0 text-error" />
-                <span>
-                  <span className="block text-sm font-semibold text-error">Close staff account</span>
-                  <span className="block text-xs text-muted">Can’t be undone. Their records are kept.</span>
-                </span>
-              </button>
-            </>
-          )}
+          <p className="px-3 pt-2 pb-3 text-xs text-muted">Staff passwords are reset by the team with the seed script.</p>
+          <div className="my-1 border-t border-divider" />
+          <button type="button" className={item} onClick={() => pick('close')}>
+            <SnowIcon size={18} className="mt-0.5 shrink-0 text-error" />
+            <span>
+              <span className="block text-sm font-semibold text-error">Close staff account</span>
+              <span className="block text-xs text-muted">Can’t be undone. Their records are kept.</span>
+            </span>
+          </button>
         </div>
       )}
     </div>

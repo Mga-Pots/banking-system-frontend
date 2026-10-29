@@ -4,7 +4,7 @@ import { users } from '../mocks/users'
 import { notifications } from '../mocks/notifications'
 import { auditLogs } from '../mocks/auditLogs'
 
-// Admin = IT and people: staff accounts, user access, password resets for customers,
+// Admin = IT and people: create and close staff accounts, see the user list (read-only),
 // and read-only review of the audit and notification logs. No money data at all.
 // Banking operations live in ./staff.js. See CLAUDE.md for the rules.
 
@@ -14,14 +14,6 @@ const identityOnly = (user) => Object.fromEntries(IDENTITY_FIELDS.filter((f) => 
 
 // The admin notification log is metadata only: the message can contain amounts.
 const notificationMeta = ({ _id, recipient, type, isRead, createdAt }) => ({ _id, recipient, type, isRead, createdAt })
-
-// Readable, but not guessable: 12 letters and digits in 3 groups (no 0/O, 1/l/I).
-const tempPassword = () => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
-  const bytes = crypto.getRandomValues(new Uint32Array(12))
-  const raw = Array.from(bytes, (n) => chars[n % chars.length]).join('')
-  return `${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8)}`
-}
 
 export const createStaff = async ({ name, email, password }) => {
   if (USE_MOCK) {
@@ -78,31 +70,6 @@ export const updateUserStatus = async (id, status) => {
     return mockResponse(identityOnly(user))
   }
   return (await api.patch(`/admin/users/${id}/status`, { status })).data
-}
-
-// Customers only (open decision 4, option A). Returns { temporaryPassword } once;
-// the user must set a new password at their next login.
-export const resetPassword = async (id) => {
-  if (USE_MOCK) {
-    const user = users.find((u) => u._id === id)
-    if (!user) return mockError('User not found')
-    if (user.role !== 'customer') return mockError('Only customer passwords can be reset here')
-    user.mustChangePassword = true
-    user.updatedAt = new Date().toISOString()
-    logMock('user.password_reset', 'User', id)
-    notifications.push({
-      _id: `n${Date.now()}`,
-      recipient: id,
-      type: 'security',
-      message: 'Your password was reset by an admin. Please set a new one when you log in.',
-      relatedTransaction: null,
-      isRead: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    })
-    return mockResponse({ temporaryPassword: tempPassword() })
-  }
-  return (await api.patch(`/admin/users/${id}/reset-password`)).data
 }
 
 export const getAuditLogs = async () => {

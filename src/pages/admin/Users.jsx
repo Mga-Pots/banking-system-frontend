@@ -96,7 +96,7 @@ export default function AdminUsers() {
         </Button>
       </div>
       <p className="mb-6 text-sm text-muted">
-        Identity and access only. Admins reset customer passwords and close staff accounts. Staff close customer bank accounts.
+        Identity and access only. Admins manage staff accounts; customers are handled by staff.
       </p>
 
       <Card>

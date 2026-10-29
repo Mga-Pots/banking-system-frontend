@@ -45,7 +45,7 @@ export default function UserTable({ users, meId, onPick, showIdCheck = true, emp
             {shown.map((u) => {
               const isMe = u._id === meId
               // Admins can't manage themselves or other admins, and closed accounts are final.
-              const canManage = !isMe && u.role !== 'admin' && u.status !== 'closed'
+              const canManage = !isMe && u.role === 'staff' && u.status !== 'closed' // admins only manage staff
               return (
                 <tr key={u._id} className="border-t border-divider">
                   <td className="py-3.5 pr-4">

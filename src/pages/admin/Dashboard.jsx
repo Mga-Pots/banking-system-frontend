@@ -6,7 +6,7 @@ import Skeleton from '../../components/ui/Skeleton'
 import ErrorState, { ServerMessage } from '../../components/ui/ErrorState'
 import Weave from '../../components/ui/Weave'
 import { useToast } from '../../components/ui/Toast'
-import { ChevronDownIcon, KeyIcon, LockIcon, ShieldIcon, UserPlusIcon } from '../../components/ui/Icons'
+import { ChevronDownIcon, KeyIcon, LockIcon, ShieldIcon, UserPlusIcon, UsersIcon } from '../../components/ui/Icons'
 import { Avatar, StatCard, Tag } from '../../components/admin/AdminBits'
 import CreateStaffModal from '../../components/admin/CreateStaffModal'
 import { useAuth } from '../../context/AuthContext'
@@ -145,9 +145,9 @@ export default function AdminDashboard() {
                   <UserPlusIcon size={18} />
                   Create staff
                 </Button>
-                <Button variant="ghost" size="lg" to="/admin/users">
-                  <KeyIcon size={18} />
-                  Reset a password
+                <Button variant="ghost" size="lg" to="/admin/staff">
+                  <UsersIcon size={18} />
+                  Manage staff
                 </Button>
               </div>
             </div>
@@ -162,7 +162,6 @@ export default function AdminDashboard() {
               {/* Each row: label, value, and whether its data is missing (loading or failed) */}
               {[
                 ['New sign-ups', byRole('customer').filter((u) => isToday(u.createdAt)).length, !sections.users.data],
-                ['Password resets', countLogs('user.password_reset', isToday), !sections.logs.data],
                 ['Staff created', countLogs('staff.create', isToday), !sections.logs.data],
                 ['Staff closed', countLogs('user.status_update', isToday), !sections.logs.data],
               ].map(([label, value, missing]) => (
@@ -198,8 +197,8 @@ export default function AdminDashboard() {
               failed={usersFailed}
             />
             <StatCard
-              label="Password resets"
-              value={countLogs('user.password_reset', (d) => withinDays(d, 7))}
+              label="Staff closed"
+              value={countLogs('user.status_update', (d) => withinDays(d, 7))}
               hint="This week"
               loading={logsLoading}
               failed={logsFailed}
