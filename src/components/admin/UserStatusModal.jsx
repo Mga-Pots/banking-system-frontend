@@ -4,34 +4,20 @@ import Button from '../ui/Button'
 import Input from '../ui/Input'
 import { updateUserStatus } from '../../api/admin'
 
-// What each action does to the account's status, and how the dialog reads.
+// Admins can only close staff accounts. Disable / turn back on was removed, and
+// customers are closed by staff through their bank account.
 const ACTIONS = {
-  disable: {
-    status: 'disabled',
-    title: () => 'Disable this account?',
-    body: (name) => `${name} won’t be able to log in until an admin turns the account back on. Nothing is deleted.`,
-    button: 'Disable account',
-    variant: 'danger',
-  },
-  enable: {
-    status: 'active',
-    title: () => 'Turn this account back on?',
-    body: (name) => `${name} will be able to log in again right away.`,
-    button: 'Turn back on',
-    variant: 'primary',
-  },
   close: {
     status: 'closed',
-    title: () => 'Close this account permanently?',
-    body: null,
-    button: 'Close permanently',
+    title: () => 'Close this staff account?',
+    body: (name) => `${name} loses access right away and is logged out. Their past work stays in the audit log.`,
+    button: 'Close account',
     variant: 'danger',
     confirmWord: 'CLOSE',
   },
 }
 
-// Confirms disabling, re-enabling, or permanently closing a user's account.
-// Closing asks the admin to type CLOSE first, since it can't be undone.
+// Confirms closing a staff account. The admin types CLOSE first, since it can't be undone.
 export default function UserStatusModal({ user, action, onClose, onSaved }) {
   const a = ACTIONS[action]
   const [typed, setTyped] = useState('')

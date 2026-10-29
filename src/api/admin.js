@@ -8,8 +8,6 @@ import { auditLogs } from '../mocks/auditLogs'
 // and read-only review of the audit and notification logs. No money data at all.
 // Banking operations live in ./staff.js. See CLAUDE.md for the rules.
 
-const USER_STATUSES = ['active', 'deactivated', 'disabled', 'closed']
-
 // The admin user list only gets identity and access fields (data minimization).
 const IDENTITY_FIELDS = ['_id', 'name', 'email', 'contactNumber', 'role', 'status', 'isVerified', 'createdAt', 'updatedAt']
 const identityOnly = (user) => Object.fromEntries(IDENTITY_FIELDS.filter((f) => f in user).map((f) => [f, user[f]]))
@@ -64,14 +62,16 @@ export const getUserById = async (id) => {
   return (await api.get(`/admin/users/${id}`)).data
 }
 
-// Activate, disable or close. Admins can't change their own status.
+// Close a staff account: PATCH /admin/users/:id/status with { status: "closed" } only.
+// Disable / re-enable is gone; customers are closed by staff via their bank account.
 export const updateUserStatus = async (id, status) => {
   if (USE_MOCK) {
     const user = users.find((u) => u._id === id)
     if (!user) return mockError('User not found')
     if (id === getMockUser()?._id) return mockError('You can’t change your own account status')
-    if (!USER_STATUSES.includes(status)) return mockError('Invalid status')
-    if (user.status === 'closed') return mockError('Closed accounts can’t be changed')
+    if (status !== 'closed') return mockError('Admins can only close staff accounts')
+    if (user.role !== 'staff') return mockError('Only staff accounts can be closed here')
+    if (user.status === 'closed') return mockError('This account is already closed')
     user.status = status
     user.updatedAt = new Date().toISOString()
     logMock('user.status_update', 'User', id)

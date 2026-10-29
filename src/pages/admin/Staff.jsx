@@ -69,7 +69,7 @@ export default function AdminStaff() {
       </div>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
-        <StatCard label="Staff" value={staff.length} hint={`${activeStaff} active, ${staff.length - activeStaff} without access`} loading={loading} />
+        <StatCard label="Staff" value={staff.length} hint={`${activeStaff} active, ${staff.length - activeStaff} closed`} loading={loading} />
         <StatCard label="Admins" value={admins} hint="Created by the seed script" loading={loading} />
         <StatCard
           label="Added this month"

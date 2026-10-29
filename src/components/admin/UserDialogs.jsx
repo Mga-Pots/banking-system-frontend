@@ -2,11 +2,6 @@ import CreateStaffModal from './CreateStaffModal'
 import ResetPasswordModal from './ResetPasswordModal'
 import UserStatusModal from './UserStatusModal'
 
-const statusMessages = {
-  disabled: (name) => `${name}’s account is disabled. They’ve been logged out.`,
-  active: (name) => `${name}’s account is back on.`,
-  closed: (name) => `${name}’s account is closed permanently.`,
-}
 
 // The dialogs behind the Users and Staff pages. `dialog` is { type, user } or null;
 // `done(message)` closes it, shows a toast, and reloads.
@@ -24,13 +19,13 @@ export default function UserDialogs({ dialog, onClose, done }) {
       />
     )
   }
-  if (['disable', 'enable', 'close'].includes(dialog.type)) {
+  if (dialog.type === 'close') {
     return (
       <UserStatusModal
         user={dialog.user}
-        action={dialog.type}
+        action="close"
         onClose={onClose}
-        onSaved={(u, status) => done(statusMessages[status](u.name))}
+        onSaved={(u) => done(`${u.name}’s staff account is closed.`)}
       />
     )
   }

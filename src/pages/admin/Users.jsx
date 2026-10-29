@@ -96,7 +96,7 @@ export default function AdminUsers() {
         </Button>
       </div>
       <p className="mb-6 text-sm text-muted">
-        Identity and access only. Roles are fixed when an account is created: to remove access, disable or close it.
+        Identity and access only. Admins reset customer passwords and close staff accounts. Staff close customer bank accounts.
       </p>
 
       <Card>
@@ -106,7 +106,6 @@ export default function AdminUsers() {
             <option value="any">Status: All</option>
             <option value="active">Active</option>
             <option value="deactivated">Deactivated</option>
-            <option value="disabled">Disabled</option>
             <option value="closed">Closed</option>
           </FilterSelect>
           <FilterSelect id="id-filter" label="ID check" value={idFilter} onChange={setIdFilter}>

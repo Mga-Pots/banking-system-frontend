@@ -164,7 +164,7 @@ export default function AdminDashboard() {
                 ['New sign-ups', byRole('customer').filter((u) => isToday(u.createdAt)).length, !sections.users.data],
                 ['Password resets', countLogs('user.password_reset', isToday), !sections.logs.data],
                 ['Staff created', countLogs('staff.create', isToday), !sections.logs.data],
-                ['Access changes', countLogs('user.status_update', isToday), !sections.logs.data],
+                ['Staff closed', countLogs('user.status_update', isToday), !sections.logs.data],
               ].map(([label, value, missing]) => (
                 <div key={label} className="flex items-center justify-between text-sm">
                   <span className="text-white/80">{label}</span>
@@ -179,7 +179,7 @@ export default function AdminDashboard() {
             <StatCard
               label="Staff accounts"
               value={staff.length}
-              hint={`${staff.filter((u) => u.status === 'active').length} active, ${staff.filter((u) => u.status !== 'active').length} off`}
+              hint={`${staff.filter((u) => u.status === 'active').length} active, ${staff.filter((u) => u.status === 'closed').length} closed`}
               loading={usersLoading}
               failed={usersFailed}
             />
@@ -191,9 +191,9 @@ export default function AdminDashboard() {
               failed={usersFailed}
             />
             <StatCard
-              label="Can’t log in"
-              value={users.filter((u) => u.status === 'disabled' || u.status === 'closed').length}
-              hint="Disabled or closed"
+              label="Closed accounts"
+              value={users.filter((u) => u.status === 'closed').length}
+              hint="Can’t log in anymore"
               loading={usersLoading}
               failed={usersFailed}
             />
