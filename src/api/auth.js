@@ -10,6 +10,8 @@ export const login = async ({ email, password }) => {
   if (USE_MOCK) {
     const user = users.find((u) => u.email === normalizeEmail(email))
     if (!user) return mockError('Invalid email or password')
+    // Same messages as the backend: closed accounts get their own message
+    if (user.status === 'closed') return mockError('This account is closed')
     if (user.status !== 'active') return mockError('This account is not active')
     return mockResponse({ user: withoutToken(user), token: user.token })
   }
