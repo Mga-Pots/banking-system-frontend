@@ -12,6 +12,7 @@ import { getAuditLogs, getNotificationLogs, getUsers } from '../../api/admin'
 import { ACCESS_ACTIONS, TYPE_LABELS, describeLog } from '../../utils/auditText'
 import { isToday, withinDays } from '../../utils/dates'
 import { formatRelative } from '../../utils/formatDate'
+import { peopleIndex } from '../../utils/people'
 import { LOADING, combine, keepData, retrying, settle } from '../../utils/loadResults'
 
 const accessIcons = { 'staff.create': UserPlusIcon, 'user.password_reset': KeyIcon, 'user.status_update': LockIcon }
@@ -81,13 +82,16 @@ export default function AdminDashboard() {
   const users = sections.users.data ?? []
   const logs = sections.logs.data ?? []
   const notifs = sections.notifs.data ?? []
-  const userById = Object.fromEntries(users.map((u) => [u._id, u]))
+  const notifsLoading = sections.notifs.status === 'loading'
+  const notifsFailed = !notifsLoading && !sections.notifs.data
+  const notifsToday = notifs.filter((n) => isToday(n.createdAt))
+  const userById = peopleIndex(users, [...logs.map((l) => l.actorInfo), ...notifs.map((n) => n.recipientInfo)])
   const byRole = (r) => users.filter((u) => u.role === r)
   const staff = byRole('staff')
   const sorted = [...logs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
   const countLogs = (action, test) => logs.filter((l) => l.action === action && test(l.createdAt)).length
 
-  const staffActivity = sorted.filter((l) => userById[l.actor]?.role === 'staff').slice(0, 5)
+  const staffActivity = sorted.filter((l) => (userById[l.actor]?.role ?? l.actorRole) === 'staff').slice(0, 5)
   const accessChanges = sorted.filter((l) => ACCESS_ACTIONS.includes(l.action)).slice(0, 4)
   const securityAlerts = [...notifs]
     .filter((n) => n.type === 'security')
@@ -201,9 +205,40 @@ export default function AdminDashboard() {
             />
           </div>
 
+          {/* Notification metadata (moved here from the Notification log page) */}
+          <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+            <StatCard
+              label="Notifications today"
+              value={notifsToday.length}
+              hint={`To ${plural(new Set(notifsToday.map((n) => n.recipient)).size, 'user')}`}
+              loading={notifsLoading}
+              failed={notifsFailed}
+            />
+            <StatCard
+              label="Unread"
+              value={notifs.filter((n) => !n.isRead).length}
+              hint="Across all users"
+              loading={notifsLoading}
+              failed={notifsFailed}
+            />
+            <StatCard
+              label="Security alerts"
+              value={notifs.filter((n) => n.type === 'security').length}
+              hint="Logins and access"
+              loading={notifsLoading}
+              failed={notifsFailed}
+            />
+            <StatCard
+              label="Account alerts"
+              value={notifs.filter((n) => n.type === 'account').length}
+              hint="Verified, frozen, or closed"
+              loading={notifsLoading}
+              failed={notifsFailed}
+            />
+          </div>
+
           <Card>
             <CardHeader title="Staff activity" link="Audit log" to="/admin/audit-log" />
-            <p className="-mt-1 pb-3 text-sm text-muted">What staff did lately. You can review it here but can’t change it.</p>
             {activity.status === 'loading' ? (
               <Skeleton className="h-40" />
             ) : !activity.data ? (
@@ -271,7 +306,6 @@ export default function AdminDashboard() {
 
           <Card>
             <CardHeader title="Security alerts sent" link="Log" to="/admin/notification-log" />
-            <p className="-mt-1 pb-3 text-[13px] text-muted">Message text is hidden from admins.</p>
             {sections.notifs.status === 'loading' ? (
               <Skeleton className="h-28" />
             ) : !sections.notifs.data ? (

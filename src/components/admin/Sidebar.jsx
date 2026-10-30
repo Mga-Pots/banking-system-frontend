@@ -1,6 +1,6 @@
 import { Link, NavLink } from 'react-router-dom'
 import Logo from '../auth/Logo'
-import { BellIcon, ClipboardIcon, GridIcon, ShieldIcon, UserPlusIcon, UsersIcon } from '../ui/Icons'
+import { BellIcon, ClipboardIcon, GridIcon, UserPlusIcon, UsersIcon } from '../ui/Icons'
 
 // Admin = IT and people only. Bank accounts and transactions are staff pages.
 const groups = [
@@ -61,14 +61,6 @@ export default function AdminSidebar({ onNavigate }) {
           </div>
         ))}
       </nav>
-
-      <div className="mt-auto flex gap-2.5 rounded-2xl bg-mint p-3.5">
-        <ShieldIcon size={20} className="mt-0.5 shrink-0 text-ink" />
-        <p className="text-xs text-label">
-          <span className="block text-sm font-bold text-ink">Admin · IT &amp; people</span>
-          No access to money, accounts, or transactions
-        </p>
-      </div>
     </div>
   )
 }

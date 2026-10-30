@@ -3,12 +3,11 @@ import Card from '../../components/ui/Card'
 import Skeleton from '../../components/ui/Skeleton'
 import ErrorState from '../../components/ui/ErrorState'
 import { useToast } from '../../components/ui/Toast'
-import { FilterSelect, SearchInput, StatCard } from '../../components/admin/AdminBits'
+import { FilterSelect, SearchInput } from '../../components/admin/AdminBits'
 import UserTable from '../../components/admin/UserTable'
 import UserDialogs from '../../components/admin/UserDialogs'
 import { useAuth } from '../../context/AuthContext'
 import { getUsers } from '../../api/admin'
-import { withinDays } from '../../utils/dates'
 
 const messageOf = (err) => err.response?.data?.message ?? err.message
 // Staff comes first and is the default: it's the only tab where admins manage anyone.
@@ -20,7 +19,7 @@ const TABS = [
 ]
 
 // Everyone's identity and access. No balances, accounts, or transactions here.
-// The Staff tab has the staff summary and Manage (close a staff account).
+// The Staff tab has Manage (close a staff account).
 // Creating staff is its own page (sidebar: Create staff).
 export default function AdminUsers() {
   const { user: me } = useAuth()
@@ -56,9 +55,6 @@ export default function AdminUsers() {
   const count = (role) => users.filter((u) => role === 'all' || u.role === role).length
   const onStaff = tab === 'staff'
   const showIdCheck = tab === 'customer' || tab === 'all' // staff and admins don't need one
-  const staff = users.filter((u) => u.role === 'staff')
-  const activeStaff = staff.filter((u) => u.status === 'active').length
-  const newStaff = staff.filter((u) => withinDays(u.createdAt, 30))
   const q = search.trim().toLowerCase()
   const filtered = users
     .filter((u) => tab === 'all' || u.role === tab)
@@ -75,7 +71,7 @@ export default function AdminUsers() {
 
   return (
     <>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div role="group" aria-label="Show" className="flex flex-wrap gap-2">
           {TABS.map(([value, label]) => {
             const on = tab === value
@@ -98,23 +94,6 @@ export default function AdminUsers() {
           })}
         </div>
       </div>
-      <p className="mb-6 text-sm text-muted">
-        Identity and access only. Admins manage staff accounts; customers are handled by staff.
-      </p>
-
-      {onStaff && (
-        <div className="mb-6 grid gap-4 sm:grid-cols-3">
-          <StatCard label="Staff" value={staff.length} hint={`${activeStaff} active, ${staff.length - activeStaff} closed`} loading={loading} />
-          <StatCard label="Admins" value={count('admin')} hint="Created by the seed script" loading={loading} />
-          <StatCard
-            label="Added this month"
-            value={newStaff.length}
-            hint={newStaff.length ? newStaff.map((u) => u.name).slice(0, 2).join(', ') : 'No new staff'}
-            loading={loading}
-          />
-        </div>
-      )}
-
       <Card>
         <div className="flex flex-col gap-3 pb-5 sm:flex-row">
           <SearchInput id="user-search" label="Search users" value={search} onChange={setSearch} placeholder="Search name, email, or contact number" />

@@ -3,9 +3,10 @@ import Card from '../../components/ui/Card'
 import Skeleton from '../../components/ui/Skeleton'
 import ErrorState from '../../components/ui/ErrorState'
 import Pagination from '../../components/customer/Pagination'
-import { Avatar, FilterSelect, SearchInput, StatCard, Tag } from '../../components/admin/AdminBits'
+import { Avatar, FilterSelect, SearchInput, Tag } from '../../components/admin/AdminBits'
 import { getNotificationLogs, getUsers } from '../../api/admin'
-import { groupByDay, isToday, timeOf, withinDays } from '../../utils/dates'
+import { peopleIndex } from '../../utils/people'
+import { groupByDay, timeOf, withinDays } from '../../utils/dates'
 import { LOADING, keepData, retrying, settle } from '../../utils/loadResults'
 
 const PAGE_SIZE = 20
@@ -46,7 +47,7 @@ export default function AdminNotificationLog() {
 
   const items = sections.items.data ?? []
   const loading = sections.items.status === 'loading'
-  const userById = Object.fromEntries((sections.users.data ?? []).map((u) => [u._id, u]))
+  const userById = peopleIndex(sections.users.data ?? [], items.map((n) => n.recipientInfo))
   const q = search.trim().toLowerCase()
   const rows = items
     .filter((n) => type === 'any' || n.type === type)
@@ -61,7 +62,6 @@ export default function AdminNotificationLog() {
   const current = Math.min(page, totalPages)
   const shown = rows.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE)
   const groups = groupByDay(shown)
-  const today = items.filter((n) => isToday(n.createdAt))
 
   if (!loading && !sections.items.data) {
     return <ErrorState title="We couldn’t load the notification log" message={sections.items.error} onRetry={retry} />
@@ -69,13 +69,6 @@ export default function AdminNotificationLog() {
 
   return (
     <>
-      <div className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatCard label="Sent today" value={today.length} hint={`To ${new Set(today.map((n) => n.recipient)).size} users`} loading={loading} />
-        <StatCard label="Unread" value={items.filter((n) => !n.isRead).length} hint="Across all users" loading={loading} />
-        <StatCard label="Security alerts" value={items.filter((n) => n.type === 'security').length} hint="Logins and password resets" loading={loading} />
-        <StatCard label="Account alerts" value={items.filter((n) => n.type === 'account').length} hint="Verified, frozen, or closed" loading={loading} />
-      </div>
-
       <Card>
         <div className="flex flex-col gap-3 pb-3 lg:flex-row">
           <SearchInput id="notif-search" label="Search recipient" value={search} onChange={filterBy(setSearch)} placeholder="Search recipient" />
@@ -98,9 +91,6 @@ export default function AdminNotificationLog() {
             <option value="all">All time</option>
           </FilterSelect>
         </div>
-        <p className="pb-4 text-sm text-muted">
-          Message text is hidden because it can contain amounts. You see who got what kind of notice, and when.
-        </p>
 
         {sections.users.status === 'error' && !sections.users.data && (
           <ErrorState

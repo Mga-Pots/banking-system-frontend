@@ -41,9 +41,55 @@ export const createStaff = async ({ name, email, password }) => {
   return (await api.post('/admin/staff', { name, email, password })).data
 }
 
+// The real backend's admin endpoints send `id` (not `_id`), people as objects
+// ({ id, name, email, role }) and actions like "STAFF_CREATED". These turn that into
+// the shape the pages (and the mocks) use. Either shape works.
+const idOf = (v) => (v && typeof v === 'object' ? String(v._id ?? v.id) : v)
+const personOf = (v) =>
+  v && typeof v === 'object' ? { _id: idOf(v), name: v.name, email: v.email, role: v.role } : null
+
+const ACTION_NAMES = {
+  STAFF_CREATED: 'staff.create',
+  STAFF_STATUS_UPDATED: 'user.status_update',
+  CUSTOMER_VERIFIED: 'user.verify',
+  ACCOUNT_FROZEN: 'account.status_update',
+  ACCOUNT_UNFROZEN: 'account.status_update',
+  ACCOUNT_CLOSED: 'account.status_update',
+  TRANSACTION_APPROVED: 'transaction.status_update',
+  TRANSACTION_REJECTED: 'transaction.status_update',
+}
+
+const fromBackendUser = (u) => ({ ...u, _id: idOf(u) })
+const fromBackendLog = (log) => ({
+  _id: idOf(log),
+  actor: idOf(log.actor),
+  actorInfo: personOf(log.actor),
+  actorRole: log.actorRole ?? log.actor?.role,
+  action: ACTION_NAMES[log.action] ?? log.action,
+  targetType: log.targetType,
+  targetId: idOf(log.targetId),
+  // A transaction's reference number (TXN-...), when the backend includes it
+  reference: log.metadata?.referenceNumber ?? null,
+  // The customer an account or transaction belongs to, when the backend includes it
+  customer: idOf(log.metadata?.customer) ?? null,
+  customerInfo: log.metadata?.customer ? { ...personOf(log.metadata.customer), role: 'customer' } : null,
+  outcome: log.outcome,
+  createdAt: log.createdAt,
+})
+// Metadata only: the message is dropped even if the backend sends it.
+const fromBackendNotification = (n) => ({
+  _id: idOf(n),
+  recipient: idOf(n.recipient),
+  recipientInfo: personOf(n.recipient),
+  type: n.type,
+  isRead: n.isRead,
+  createdAt: n.createdAt,
+})
+const mapData = (res, fn) => ({ ...res, data: (res.data ?? []).map(fn) })
+
 export const getUsers = async () => {
   if (USE_MOCK) return mockResponse(users.map((u) => identityOnly(withoutToken(u))))
-  return (await api.get('/admin/users')).data
+  return mapData((await api.get('/admin/users', { params: { limit: 100 } })).data, fromBackendUser)
 }
 
 export const getUserById = async (id) => {
@@ -54,7 +100,7 @@ export const getUserById = async (id) => {
   return (await api.get(`/admin/users/${id}`)).data
 }
 
-// Close a staff account: PATCH /admin/users/:id/status with { status: "closed" } only.
+// Close a staff account: PATCH /admin/staff/:id/status with { status: "closed" } only.
 // Disable / re-enable is gone; customers are closed by staff via their bank account.
 export const updateUserStatus = async (id, status) => {
   if (USE_MOCK) {
@@ -69,15 +115,15 @@ export const updateUserStatus = async (id, status) => {
     logMock('user.status_update', 'User', id)
     return mockResponse(identityOnly(user))
   }
-  return (await api.patch(`/admin/users/${id}/status`, { status })).data
+  return (await api.patch(`/admin/staff/${id}/status`, { status })).data
 }
 
 export const getAuditLogs = async () => {
   if (USE_MOCK) return mockResponse(auditLogs.map((l) => ({ ...l })))
-  return (await api.get('/admin/audit-logs')).data
+  return mapData((await api.get('/admin/audit-logs', { params: { limit: 100 } })).data, fromBackendLog)
 }
 
 export const getNotificationLogs = async () => {
   if (USE_MOCK) return mockResponse(notifications.map(notificationMeta))
-  return (await api.get('/admin/notifications')).data
+  return mapData((await api.get('/admin/notifications', { params: { limit: 100 } })).data, fromBackendNotification)
 }

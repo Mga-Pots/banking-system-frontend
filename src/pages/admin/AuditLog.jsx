@@ -3,11 +3,11 @@ import Card from '../../components/ui/Card'
 import Skeleton from '../../components/ui/Skeleton'
 import ErrorState from '../../components/ui/ErrorState'
 import Pagination from '../../components/customer/Pagination'
-import { ShieldIcon } from '../../components/ui/Icons'
 import { Avatar, FilterSelect, SearchInput, Tag } from '../../components/admin/AdminBits'
 import { roleLabels } from '../../components/admin/roleLabels'
 import { useAuth } from '../../context/AuthContext'
 import { getAuditLogs, getUsers } from '../../api/admin'
+import { peopleIndex } from '../../utils/people'
 import { ACTION_LABELS, TYPE_LABELS, describeLog } from '../../utils/auditText'
 import { groupByDay, timeOf, withinDays } from '../../utils/dates'
 import { LOADING, keepData, retrying, settle } from '../../utils/loadResults'
@@ -49,7 +49,7 @@ export default function AdminAuditLog() {
 
   const logs = sections.logs.data ?? []
   const loading = sections.logs.status === 'loading'
-  const userById = Object.fromEntries((sections.users.data ?? []).map((u) => [u._id, u]))
+  const userById = peopleIndex(sections.users.data ?? [], logs.flatMap((l) => [l.actorInfo, l.customerInfo]))
   const actors = [...new Set(logs.map((l) => l.actor))].filter((id) => userById[id])
   const q = search.trim().toLowerCase()
   const rows = logs
@@ -57,7 +57,7 @@ export default function AdminAuditLog() {
     .filter(({ log }) => action === 'any' || log.action === action)
     .filter(({ log }) => who === 'any' || log.actor === who)
     .filter(({ log }) => range === 'all' || withinDays(log.createdAt, Number(range)))
-    .filter(({ text }) => !q || `${text.actor} ${text.verb} ${text.target}`.toLowerCase().includes(q))
+    .filter(({ text }) => !q || `${text.actor} ${text.verb} ${text.target} ${text.customer ?? ''}`.toLowerCase().includes(q))
     .sort((a, b) => new Date(b.log.createdAt) - new Date(a.log.createdAt))
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
   const current = Math.min(page, totalPages)
@@ -70,11 +70,6 @@ export default function AdminAuditLog() {
 
   return (
     <>
-      <p className="mb-6 flex items-center gap-2.5 rounded-2xl bg-mint px-5 py-3.5 text-sm font-semibold text-ink">
-        <ShieldIcon size={18} className="shrink-0" />
-        Every change by staff and admins is recorded here. Entries can’t be edited or deleted.
-      </p>
-
       <Card>
         <div className="flex flex-col gap-3 pb-5 lg:flex-row">
           <SearchInput id="audit-search" label="Search the audit log" value={search} onChange={filterBy(setSearch)} placeholder="Search by name or ID" />
@@ -104,7 +99,7 @@ export default function AdminAuditLog() {
         {sections.users.status === 'error' && !sections.users.data && (
           <ErrorState
             compact
-            title="Names didn’t load, so entries show “Someone” and “a user”."
+            title="Names didn’t load, so entries show “Unknown user”."
             message={sections.users.error}
             onRetry={retry}
             className="mb-5 rounded-xl border border-divider p-4"
@@ -115,19 +110,20 @@ export default function AdminAuditLog() {
           <Skeleton className="h-72" />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] border-collapse text-left">
+            <table className="w-full min-w-[900px] border-collapse text-left">
               <thead>
                 <tr className="border-t border-divider text-xs font-bold tracking-wider text-muted uppercase">
-                  <th scope="col" className="w-[110px] py-3 pr-4 font-bold">When</th>
-                  <th scope="col" className="w-[220px] py-3 pr-4 font-bold">Who</th>
+                  <th scope="col" className="w-[100px] py-3 pr-4 font-bold">When</th>
+                  <th scope="col" className="w-[24%] py-3 pr-4 font-bold">Who</th>
                   <th scope="col" className="py-3 pr-4 font-bold">What happened</th>
-                  <th scope="col" className="w-[120px] py-3 font-bold">Type</th>
+                  <th scope="col" className="w-[26%] py-3 pr-4 font-bold">To</th>
+                  <th scope="col" className="w-[120px] py-3 text-right font-bold">Type</th>
                 </tr>
               </thead>
               <tbody>
                 {groups.length === 0 && (
                   <tr className="border-t border-divider">
-                    <td colSpan={4} className="py-10 text-center text-muted">
+                    <td colSpan={5} className="py-10 text-center text-muted">
                       No entries match these filters.
                     </td>
                   </tr>
@@ -135,7 +131,7 @@ export default function AdminAuditLog() {
                 {groups.map(({ day, items }) => (
                   <Fragment key={day}>
                     <tr className="border-t border-divider">
-                      <th colSpan={4} scope="colgroup" className="pt-4 pb-1.5 text-xs font-bold tracking-wider text-ink uppercase">
+                      <th colSpan={5} scope="colgroup" className="pt-4 pb-1.5 text-xs font-bold tracking-wider text-ink uppercase">
                         {day}
                       </th>
                     </tr>
@@ -151,10 +147,32 @@ export default function AdminAuditLog() {
                             </span>
                           </div>
                         </td>
-                        <td className="py-3 pr-4 text-[15px] text-label">
-                          {text.verb} <span className="font-semibold text-text">{text.target}</span>
+                        <td className="py-3 pr-4 text-[15px] font-semibold text-text">
+                          {text.verb.charAt(0).toUpperCase() + text.verb.slice(1)}
                         </td>
-                        <td className="py-3">
+                        <td className="py-3 pr-4">
+                          {log.targetType === 'User' ? (
+                            <span className="block min-w-0 text-sm">
+                              <span className="block truncate font-semibold text-text">{text.target}</span>
+                              <span className="block truncate text-xs text-muted">
+                                {roleLabels[userById[log.targetId]?.role] ?? userById[log.targetId]?.email ?? ''}
+                              </span>
+                            </span>
+                          ) : (
+                            // Accounts and transactions: what it was, then its masked id.
+                            // (The customer's name shows only if the backend sends it.)
+                            <span className="block min-w-0 text-sm">
+                              <span className="block truncate font-semibold text-text">
+                                {text.customer ?? (log.targetType === 'BankAccount' ? 'Bank account' : 'Transaction')}
+                              </span>
+                              <span className="block truncate text-xs text-muted">
+                                {text.customer ? `${TYPE_LABELS[log.targetType] ?? log.targetType} ` : ''}
+                                {text.target}
+                              </span>
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 text-right">
                           <Tag>{TYPE_LABELS[log.targetType] ?? log.targetType}</Tag>
                         </td>
                       </tr>
