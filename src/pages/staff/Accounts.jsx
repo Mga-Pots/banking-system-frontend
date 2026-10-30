@@ -149,7 +149,7 @@ export default function StaffAccounts() {
                   <th scope="col" className="py-3 pr-4 font-bold">Owner</th>
                   <th scope="col" className="w-[170px] py-3 pr-4 font-bold">Account number</th>
                   <th scope="col" className="w-[120px] py-3 pr-4 font-bold">Status</th>
-                  <th scope="col" className="w-[160px] py-3 pr-4 text-right font-bold">Balance</th>
+                  <th scope="col" className="w-[160px] py-3 pr-4 text-center font-bold">Balance</th>
                   <th scope="col" className="w-[230px] py-3 font-bold">
                     <span className="sr-only">Actions</span>
                   </th>

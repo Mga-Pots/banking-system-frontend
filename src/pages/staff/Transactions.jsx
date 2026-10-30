@@ -285,7 +285,7 @@ export default function StaffTransactions() {
                   <th scope="col" className="w-[150px] py-3 pr-4 font-bold">Date</th>
                   <th scope="col" className="w-[90px] py-3 pr-4 font-bold">Type</th>
                   <th scope="col" className="py-3 pr-4 font-bold">From → To</th>
-                  <th scope="col" className="w-[140px] py-3 pr-4 text-right font-bold">Amount</th>
+                  <th scope="col" className="w-[140px] py-3 pr-4 text-center font-bold">Amount</th>
                   <th scope="col" className="w-[120px] py-3 pr-4 font-bold">Status</th>
                   <th scope="col" className="w-[100px] py-3 font-bold">
                     <span className="sr-only">Actions</span>
