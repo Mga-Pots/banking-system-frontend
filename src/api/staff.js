@@ -295,8 +295,7 @@ export const updateTransactionStatus = async (id, status, reason) => {
     logMock('transaction.status_update', 'Transaction', id)
     return mockResponse(transactionView(tx))
   }
-  if (status === 'completed') return (await api.patch(`/staff/transactions/${id}/approve`)).data
-  if (status === 'cancelled') return (await api.patch(`/staff/transactions/${id}/reject`)).data
-  // Flagging has no backend route yet — mock only.
-  throw new Error('Flagging is not supported by the backend yet')
+  // One route for all three: the backend sends "completed" to approve, "cancelled" to
+  // reject and "flagged" to flag. A flag needs a reason; a cancel may have one.
+  return (await api.patch(`/staff/transactions/${id}/status`, { status, ...(reason && { reason }) })).data
 }
