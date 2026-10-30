@@ -11,9 +11,10 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export default function Login() {
   const { login, role } = useAuth()
   const navigate = useNavigate()
-  // A message from the page that sent the user here, like after deactivating an account.
-  const notice = useLocation().state?.notice
-  const [email, setEmail] = useState('')
+  // A message from the page that sent the user here, like after registering or
+  // deactivating, and the email to start with (Register passes the new account's).
+  const { notice, email: startEmail } = useLocation().state ?? {}
+  const [email, setEmail] = useState(startEmail ?? '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)

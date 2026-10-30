@@ -96,7 +96,7 @@ export default function Register() {
     setError("");
     setLoading(true);
     try {
-      const user = await register({
+      await register({
         name: form.name.trim(),
         email: form.email.trim(),
         password: form.password,
@@ -106,7 +106,11 @@ export default function Register() {
           ? `0${toLocalMobile(form.mobile)}`
           : undefined,
       });
-      navigate(`/${user.role}`, { replace: true });
+      // No automatic login: send them to log in with the account they just made.
+      navigate("/login", {
+        replace: true,
+        state: { notice: "Your account is ready. Log in to continue.", email: form.email.trim() },
+      });
     } catch (err) {
       setError(err.response?.data?.message ?? err.message);
     } finally {
