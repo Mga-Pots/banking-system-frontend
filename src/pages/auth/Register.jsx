@@ -12,20 +12,10 @@ import {
   linkClass,
   primaryButtonClass,
 } from "../../components/auth/styles";
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { EMAIL_PATTERN, toLocalMobile } from "../../utils/contactDetails";
 
 // Fields in the order they appear, so we can focus the first one with an error
 const FIELD_ORDER = ["name", "email", "mobile", "password", "confirmPassword"];
-
-// Accepts 917 123 4567, 09171234567, or +63 917 123 4567 and returns
-// the 10-digit local part (9171234567)
-function toLocalMobile(mobile) {
-  const digits = mobile.replace(/\D/g, "");
-  if (digits.length === 12 && digits.startsWith("63")) return digits.slice(2);
-  if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1);
-  return digits;
-}
 
 // Returns { fieldName: 'error message' } for anything invalid.
 function validate({ name, email, mobile, password, confirmPassword }) {

@@ -37,6 +37,12 @@ export function AuthProvider({ children }) {
     [persist],
   )
 
+  // After the user edits their own details: keep the session, swap in the new user.
+  const updateUser = useCallback((next) => {
+    localStorage.setItem(USER_KEY, JSON.stringify(next))
+    setUser(next)
+  }, [])
+
   const clearSession = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
@@ -75,8 +81,8 @@ export function AuthProvider({ children }) {
   }, [clearSession])
 
   const value = useMemo(
-    () => ({ user, token, role: user?.role ?? null, login, register, logout }),
-    [user, token, login, register, logout],
+    () => ({ user, token, role: user?.role ?? null, login, register, logout, updateUser }),
+    [user, token, login, register, logout, updateUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
