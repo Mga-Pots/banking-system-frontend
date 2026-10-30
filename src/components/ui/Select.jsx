@@ -2,13 +2,15 @@ import { ChevronDownIcon } from './Icons'
 
 // A labelled dropdown, styled like <Input>: same label, height, border and focus.
 // The arrow on the right shows that there is a list to choose from. `hint` is the
-// text under the field (anything, including a loading placeholder).
-export default function Select({ id, label, hint, error, className = '', children, ...rest }) {
+// text under the field (anything, including a loading placeholder). `hideLabel` keeps
+// the label for screen readers only, for filter bars whose options name the filter
+// ("Type: All").
+export default function Select({ id, label, hideLabel = false, hint, error, className = '', children, ...rest }) {
   const describedBy = [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(' ')
 
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-sm font-bold text-text">
+      <label htmlFor={id} className={hideLabel ? 'sr-only' : 'text-sm font-bold text-text'}>
         {label}
       </label>
       <div className="relative">

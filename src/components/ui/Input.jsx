@@ -1,11 +1,12 @@
 // Labelled text field. `error` and `hint` are linked to the input for screen readers.
-// `prefix` is a symbol shown inside the field, like ₱.
-export default function Input({ id, label, error, hint, prefix, className = '', ...rest }) {
+// `prefix` is a symbol shown inside the field, like ₱. `hideLabel` keeps the label for
+// screen readers only (a search box in a filter bar, where the placeholder says it).
+export default function Input({ id, label, hideLabel = false, error, hint, prefix, className = '', ...rest }) {
   const describedBy = [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(' ')
 
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor={id} className="text-sm font-bold text-text">
+      <label htmlFor={id} className={hideLabel ? 'sr-only' : 'text-sm font-bold text-text'}>
         {label}
       </label>
       <div className="relative">

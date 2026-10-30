@@ -18,17 +18,18 @@ import { formatLongDate } from "../../utils/formatDate";
 
 const messageOf = (err) => err.response?.data?.message ?? err.message;
 
-// Status filters, in the order they show. `count` is the key in the API's `counts`.
+// The filter bar is one row of dropdowns, like the staff and admin pages: each one's
+// name sits in its "All" option. The count shows in the summary line under the bar.
 const STATUSES = [
-  { value: "", label: "All", count: "all" },
-  { value: "completed", label: "Completed", count: "completed" },
-  { value: "pending", label: "Pending", count: "pending" },
-  { value: "failed", label: "Failed", count: "failed" },
-  { value: "cancelled", label: "Cancelled", count: "cancelled" },
-  { value: "flagged", label: "Flagged", count: "flagged" },
+  { value: "", label: "Status: All" },
+  { value: "completed", label: "Completed" },
+  { value: "pending", label: "Pending" },
+  { value: "failed", label: "Failed" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "flagged", label: "Flagged" },
 ];
 const TYPES = [
-  { value: "", label: "All types" },
+  { value: "", label: "Type: All" },
   { value: "cash_in", label: "Cash in" },
   { value: "transfer", label: "Transfer" },
 ];
@@ -156,35 +157,6 @@ export default function History() {
   const [openTx, setOpenTx] = useState(null);
   const listRef = useRef(null);
 
-  // The status chips scroll sideways on narrow screens. While more chips wait off the
-  // right edge they fade out there, as a hint to scroll.
-  const chipsEl = useRef(null);
-  const [moreChips, setMoreChips] = useState(false);
-  const checkChips = useCallback(() => {
-    const el = chipsEl.current;
-    if (el) setMoreChips(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
-  }, []);
-  const chipsRef = useCallback(
-    (el) => {
-      chipsEl.current = el;
-      if (!el) return;
-      const observer = new ResizeObserver(checkChips);
-      observer.observe(el);
-      el.addEventListener("scroll", checkChips, { passive: true });
-      return () => {
-        observer.disconnect();
-        el.removeEventListener("scroll", checkChips);
-      };
-    },
-    [checkChips],
-  );
-  // The counts change how wide the chips are.
-  const counts = result.history?.counts;
-  useEffect(() => {
-    const frame = requestAnimationFrame(checkChips);
-    return () => cancelAnimationFrame(frame);
-  }, [counts, checkChips]);
-
   const { account, names } = meta;
   const { history } = result;
   const loading = !rangeError && result.key !== key;
@@ -270,61 +242,21 @@ export default function History() {
         </div>
       )}
 
-      <div
-        ref={chipsRef}
-        role="group"
-        aria-label="Filter by status"
-        className="-mx-1 mb-5 flex gap-2 overflow-x-auto px-1 py-1"
-        style={
-          moreChips
-            ? {
-                maskImage: "linear-gradient(to right, black calc(100% - 2.5rem), transparent)",
-                WebkitMaskImage: "linear-gradient(to right, black calc(100% - 2.5rem), transparent)",
-              }
-            : undefined
-        }
-      >
-        {STATUSES.map((s) => {
-          const active = status === s.value;
-          return (
-            <button
-              key={s.label}
-              type="button"
-              aria-pressed={active}
-              aria-label={
-                counts
-                  ? `${s.label}, ${counts[s.count]} ${counts[s.count] === 1 ? "transaction" : "transactions"}`
-                  : undefined
-              }
-              onClick={() => update({ status: s.value, page: "" })}
-              className={`inline-flex h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet ${
-                active
-                  ? "bg-ink text-white"
-                  : "border-[1.5px] border-field-line bg-white text-ink hover:bg-field"
-              }`}
-            >
-              {s.label}
-              {counts && (
-                <span className={`tabular-nums ${active ? "text-white/70" : "text-muted"}`}>
-                  {counts[s.count]}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
       <Card ref={listRef} aria-label="All transactions" aria-busy={loading} className="scroll-mt-4">
         <p role="status" className="sr-only">
           {announcement}
         </p>
 
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-          <div className="lg:flex-1">
+        {/* One filter row from xl. Narrower, the dropdowns need room for "Status: All · 11":
+            three across under the search from lg, Type and Status paired from sm, and
+            every control on its own line on phones. */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1fr_11rem_11rem_11rem]">
+          <div className="sm:col-span-2 lg:col-span-3 xl:col-span-1">
             <Input
               id="history-search"
               type="search"
               label="Search"
+              hideLabel
               placeholder="Reference, account or amount"
               autoComplete="off"
               prefix={<SearchIcon size={16} />}
@@ -332,22 +264,37 @@ export default function History() {
               onChange={(e) => setTerm(e.target.value)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-4 lg:w-[22rem]">
-            <Select
-              id="history-type"
-              label="Type"
-              value={type}
-              onChange={(e) => update({ type: e.target.value, page: "" })}
-            >
-              {TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </Select>
+          <Select
+            id="history-type"
+            label="Type"
+            hideLabel
+            value={type}
+            onChange={(e) => update({ type: e.target.value, page: "" })}
+          >
+            {TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </Select>
+          <Select
+            id="history-status"
+            label="Status"
+            hideLabel
+            value={status}
+            onChange={(e) => update({ status: e.target.value, page: "" })}
+          >
+            {STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </Select>
+          <div className="sm:col-span-2 lg:col-span-1">
             <Select
               id="history-period"
               label="Date"
+              hideLabel
               value={period}
               onChange={(e) => update({ period: e.target.value, from: "", to: "", page: "" })}
             >
