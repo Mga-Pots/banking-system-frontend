@@ -32,10 +32,9 @@ export function AuthProvider({ children }) {
     [persist],
   )
 
-  const register = useCallback(
-    async (details) => persist((await authApi.register(details)).data),
-    [persist],
-  )
+  // Creates the account but doesn't log in: the new customer logs in on the next screen.
+  // The backend also sends a token here; it's left unused. Resolves to the new user.
+  const register = useCallback(async (details) => (await authApi.register(details)).data.user, [])
 
   // After the user edits their own details: keep the session, swap in the new user.
   const updateUser = useCallback((next) => {
