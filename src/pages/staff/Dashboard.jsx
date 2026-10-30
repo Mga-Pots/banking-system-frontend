@@ -22,20 +22,23 @@ import { LOADING, keepData, retrying, settle } from '../../utils/loadResults'
 
 const shortDate = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 
-// The overview's building blocks, same look as the admin overview.
-// `section` is the load state of the data the card counts.
-function StatCard({ label, value, hint, section }) {
+// One figure in the summary card: a label, the count and a short hint. On phones the
+// count sits to the right of the label; from `sm` the three figures stand side by side.
+// `section` is the load state of the data it counts.
+function SummaryItem({ label, value, hint, section }) {
   const failed = !section.data && section.status === 'error'
   return (
-    <Card className="flex flex-col gap-2">
-      <p className="text-xs font-bold tracking-wider text-muted uppercase">{label}</p>
-      {section.status === 'loading' ? (
-        <Skeleton className="h-8 w-16" />
-      ) : (
-        <p className="font-brand text-[28px] leading-tight font-semibold text-ink tabular-nums">{failed ? '–' : value}</p>
-      )}
-      <p className="text-sm text-muted">{failed ? 'Couldn’t load' : hint}</p>
-    </Card>
+    <div className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 py-4 first:pt-0 last:pb-0 sm:grid-cols-1 sm:px-6 sm:py-0 sm:first:pl-0 sm:last:pr-0">
+      <dt className="col-start-1 row-start-1 text-xs font-bold tracking-wider text-muted uppercase">{label}</dt>
+      <dd className="col-start-2 row-span-2 row-start-1 sm:col-start-1 sm:row-span-1 sm:row-start-2">
+        {section.status === 'loading' ? (
+          <Skeleton className="h-7 w-10" />
+        ) : (
+          <span className="font-brand text-xl font-semibold text-ink tabular-nums">{failed ? '–' : value}</span>
+        )}
+      </dd>
+      <dd className="col-start-1 row-start-2 text-sm text-muted sm:row-start-3">{failed ? 'Couldn’t load' : hint}</dd>
+    </div>
   )
 }
 
@@ -148,12 +151,20 @@ export default function StaffDashboard() {
         </div>
       )}
 
-      <div className="mb-6 grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <StatCard label="Held transfers" value={pending.length} hint="Waiting for approval" section={sections.transactions} />
-        <StatCard label="Flagged" value={flagged.length} hint="Under review" section={sections.transactions} />
-        <StatCard label="To verify" value={toVerify.length} hint="Waiting for ID check" section={sections.customers} />
-        <StatCard label="Frozen accounts" value={frozen.length} hint="Can’t cash in or transfer" section={sections.accounts} />
-      </div>
+      {/* One card, not a row of tiles: the counts are a summary of the lists below.
+          Needs review covers held and flagged transfers, as on the Transactions page. */}
+      <Card className="mb-6">
+        <dl className="divide-y divide-divider sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <SummaryItem
+            label="Needs review"
+            value={toReview.length}
+            hint={`${pending.length} held · ${flagged.length} flagged`}
+            section={sections.transactions}
+          />
+          <SummaryItem label="To verify" value={toVerify.length} hint="Unverified customers" section={sections.customers} />
+          <SummaryItem label="Frozen" value={frozen.length} hint="Can’t cash in or transfer" section={sections.accounts} />
+        </dl>
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <Card className="min-w-0">
