@@ -7,7 +7,7 @@ import ErrorState from '../../components/ui/ErrorState'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { useToast } from '../../components/ui/Toast'
 import { usePrivacy } from '../../context/PrivacyContext'
-import FilterSelect from '../../components/staff/FilterSelect'
+import { FilterSelect, SearchInput } from '../../components/admin/AdminBits'
 import ReviewTransactionModal from '../../components/staff/ReviewTransactionModal'
 import { reviewedMessage } from '../../components/staff/reviewMessages'
 import { getAccounts, getTransactions, reviewActionsFor } from '../../api/staff'
@@ -21,9 +21,10 @@ const PAGE_SIZE = 10
 // "Needs review" is what staff open the page for: transfers still pending or flagged.
 const needsReview = (tx) => reviewActionsFor(tx).length > 0
 
-// Same words as the table's Type column and the customer History filter.
-const TYPE_TABS = [
-  ['any', 'All'],
+// The filter bar matches the admin pages: one row of search and dropdowns, each
+// dropdown's name in its "All" option. Type words match the table's Type column.
+const TYPE_OPTIONS = [
+  ['any', 'Type: All'],
   ['transfer', 'Transfer'],
   ['cash_in', 'Cash in'],
 ]
@@ -112,11 +113,9 @@ export default function StaffTransactions() {
   const query = search.trim().toLowerCase()
   const digits = query.replace(/\s/g, '')
 
-  // Everything the status and the search allow, whatever its type. The type pill counts come
-  // from here, so each one says how many rows that type would show with the other filters
-  // still on, and `filtered` is the same list narrowed to the chosen type.
-  const byStatus = transactions
+  const filtered = transactions
     .filter((tx) => inStatus(tx, status))
+    .filter((tx) => type === 'any' || tx.transactionType === type)
     .filter((tx) => {
       if (!query) return true
       const sides = [tx.sourceAccount, tx.destinationAccount]
@@ -126,8 +125,14 @@ export default function StaffTransactions() {
       )
     })
 
-  const countType = (value) => byStatus.filter((tx) => value === 'any' || tx.transactionType === value).length
-  const filtered = byStatus.filter((tx) => type === 'any' || tx.transactionType === type)
+  // "3 transactions · Transfer · Needs review · “juan”", like the customer History summary.
+  // Needs review says what it means here, since the dropdown can't.
+  const labelOf = (options, value) => options.find(([v]) => v === value)?.[1]
+  const activeFilters = [
+    type !== 'any' && labelOf(TYPE_OPTIONS, type),
+    status === 'review' ? 'Needs review (waiting for approval or flagged)' : status !== 'all' && labelOf(STATUS_OPTIONS, status),
+    query && `“${search.trim()}”`,
+  ].filter(Boolean)
 
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const current = Math.min(page, pages - 1)
@@ -139,65 +144,51 @@ export default function StaffTransactions() {
 
   return (
     <>
-      <div className="mb-6">
-        <div role="group" aria-label="Transaction type" className="flex flex-wrap gap-2">
-          {TYPE_TABS.map(([value, label]) => {
-            const on = type === value
-            const off = value === 'cash_in' && status === 'review'
-            return (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={on}
-                disabled={off}
-                aria-describedby={off ? 'review-hint' : undefined}
-                onClick={() => filterBy(setType)(value)}
-                className={`inline-flex h-11 items-center gap-2 rounded-full px-[18px] text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet ${
-                  on
-                    ? 'cursor-pointer bg-ink text-white'
-                    : off
-                      ? 'cursor-not-allowed border-[1.5px] border-divider bg-white text-muted'
-                      : 'cursor-pointer border-[1.5px] border-field-line bg-white text-ink hover:bg-field'
-                }`}
-              >
-                {label}
-                {!loading && !off && (
-                  <span className={`text-[13px] font-semibold ${on ? 'text-white/75' : 'text-muted'}`}>
-                    {countType(value)}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-        {status === 'review' && (
-          <p id="review-hint" className="mt-2.5 text-sm text-muted">
-            Needs review shows transfers waiting for approval or flagged for a check. Cash ins never need review.
-          </p>
-        )}
-      </div>
-
       <Card>
-        <div className="flex flex-col gap-3 pb-5 sm:flex-row">
-          <div className="flex-1">
-            <label htmlFor="transaction-search" className="sr-only">
-              Search transactions
-            </label>
-            <input
-              id="transaction-search"
-              type="search"
-              value={search}
-              onChange={(e) => filterBy(setSearch)(e.target.value)}
-              placeholder="Search reference, account number or name"
-              className="h-12 w-full min-w-0 rounded-xl border-[1.5px] border-field-line bg-field px-4 text-[15px] text-text outline-none transition placeholder:text-placeholder focus:border-wallet focus:ring-4 focus:ring-wallet/20"
-            />
-          </div>
+        <div className="flex flex-col gap-3 lg:flex-row">
+          <SearchInput
+            id="transaction-search"
+            label="Search transactions"
+            value={search}
+            onChange={filterBy(setSearch)}
+            placeholder="Search reference, account number or name"
+          />
+          <FilterSelect id="type-filter" label="Type" value={type} onChange={filterBy(setType)}>
+            {TYPE_OPTIONS.map(([value, label]) => (
+              // Cash ins never need review, so that pair could only ever be empty.
+              <option key={value} value={value} disabled={value === 'cash_in' && status === 'review'}>
+                {value === 'cash_in' && status === 'review' ? 'Cash in (never needs review)' : label}
+              </option>
+            ))}
+          </FilterSelect>
           <FilterSelect id="status-filter" label="Status" value={status} onChange={pickStatus}>
             {STATUS_OPTIONS.map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
+              <option key={value} value={value}>
+                {label}
+              </option>
             ))}
           </FilterSelect>
         </div>
+
+        {!loading && filtered.length > 0 && (
+          <div className="mt-4 flex items-center justify-between gap-3 text-sm">
+            <p className="min-w-0 text-muted">
+              <span className="font-bold text-text">
+                {filtered.length} {filtered.length === 1 ? 'transaction' : 'transactions'}
+              </span>
+              {activeFilters.length > 0 && ` · ${activeFilters.join(' · ')}`}
+            </p>
+            {!isDefault && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="-my-3 shrink-0 cursor-pointer py-3 font-bold text-wallet hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        )}
 
         {sections.accounts.status === 'error' && !sections.accounts.data && (
           <ErrorState
@@ -205,14 +196,16 @@ export default function StaffTransactions() {
             title="Customer names didn’t load, so rows show account numbers only."
             message={sections.accounts.error}
             onRetry={retry}
-            className="mb-5 rounded-xl border border-divider p-4"
+            className="mt-4 rounded-xl border border-divider p-4"
           />
         )}
 
         {loading ? (
-          <Skeleton className="h-72" />
+          <Skeleton className="mt-4 h-72" />
         ) : (
-          <div className="overflow-x-auto">
+          // `relative` keeps the header's screen-reader-only label inside this scroll box;
+          // without it the label sits past the table's right edge and the whole page scrolls sideways.
+          <div className="relative mt-4 overflow-x-auto">
             <table className="w-full min-w-[900px] border-collapse text-left">
               <thead>
                 <tr className="border-t border-divider text-xs font-bold tracking-wider text-muted uppercase">
@@ -298,9 +291,7 @@ export default function StaffTransactions() {
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-divider pt-5">
           <p className="text-sm text-muted">
-            {filtered.length === 0
-              ? 'Showing 0'
-              : `Showing ${current * PAGE_SIZE + 1}–${current * PAGE_SIZE + shown.length} of ${filtered.length}`}
+            Page {current + 1} of {pages}
           </p>
           <div className="flex gap-2">
             <Button variant="secondary" disabled={current === 0} onClick={() => setPage(current - 1)}>

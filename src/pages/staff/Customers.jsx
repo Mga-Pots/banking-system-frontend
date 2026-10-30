@@ -98,7 +98,7 @@ export default function StaffCustomers() {
         {loading ? (
           <Skeleton className="h-72" />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative overflow-x-auto">
             <table className="w-full min-w-[860px] border-collapse text-left">
               <thead>
                 <tr className="border-t border-divider text-xs font-bold tracking-wider text-muted uppercase">

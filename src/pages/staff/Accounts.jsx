@@ -8,6 +8,7 @@ import Skeleton from '../../components/ui/Skeleton'
 import ErrorState from '../../components/ui/ErrorState'
 import { useToast } from '../../components/ui/Toast'
 import AccountStatus from '../../components/customer/AccountStatus'
+import { FilterSelect, SearchInput } from '../../components/admin/AdminBits'
 import AccountStatusModal from '../../components/staff/AccountStatusModal'
 import CloseAccountModal from '../../components/staff/CloseAccountModal'
 import { getAccounts } from '../../api/staff'
@@ -17,11 +18,12 @@ import { LOADING, keepData, retrying, settle } from '../../utils/loadResults'
 
 const PAGE_SIZE = 8
 
-const TABS = [
+// Same filter bar as the admin pages and staff Transactions. Opens on Active.
+const STATUS_OPTIONS = [
+  ['all', 'Status: All'],
   ['active', 'Active'],
   ['frozen', 'Frozen'],
   ['closed', 'Closed'],
-  ['all', 'All'],
 ]
 
 // Every bank account, with its owner and balance. Staff freeze active accounts
@@ -59,9 +61,15 @@ export default function StaffAccounts() {
     setPage(0)
   }
 
+  const isDefault = tab === 'active' && !search
+  const clearFilters = () => {
+    setTab('active')
+    setSearch('')
+    setPage(0)
+  }
+
   const accounts = sections.accounts.data ?? []
   const loading = sections.accounts.status === 'loading'
-  const count = (status) => accounts.filter((a) => status === 'all' || a.status === status).length
   const query = search.trim().toLowerCase()
   const digits = query.replace(/\s/g, '')
 
@@ -77,6 +85,12 @@ export default function StaffAccounts() {
       )
     })
 
+  // "4 accounts · Active · “juan”"
+  const activeFilters = [
+    tab !== 'all' && STATUS_OPTIONS.find(([v]) => v === tab)?.[1],
+    query && `“${search.trim()}”`,
+  ].filter(Boolean)
+
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const current = Math.min(page, pages - 1)
   const shown = filtered.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE)
@@ -87,48 +101,48 @@ export default function StaffAccounts() {
 
   return (
     <>
-      <div role="group" aria-label="Show" className="mb-6 flex flex-wrap gap-2">
-        {TABS.map(([value, label]) => {
-          const on = tab === value
-          return (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={on}
-              onClick={() => filterBy(setTab)(value)}
-              className={`inline-flex h-11 cursor-pointer items-center gap-2 rounded-full px-[18px] text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet ${
-                on ? 'bg-ink text-white' : 'border-[1.5px] border-field-line bg-white text-ink hover:bg-field'
-              }`}
-            >
-              {label}
-              <span className={`text-[13px] font-semibold ${on ? 'text-white/75' : 'text-muted'}`}>
-                {loading ? '–' : count(value)}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-
       <Card>
-        <div className="pb-5">
-          <label htmlFor="account-search" className="sr-only">
-            Search accounts
-          </label>
-          <input
+        <div className="flex flex-col gap-3 lg:flex-row">
+          <SearchInput
             id="account-search"
-            type="search"
+            label="Search accounts"
             value={search}
-            onChange={(e) => filterBy(setSearch)(e.target.value)}
+            onChange={filterBy(setSearch)}
             placeholder="Search account number, owner name or email"
-            className="h-12 w-full min-w-0 rounded-xl border-[1.5px] border-field-line bg-field px-4 text-[15px] text-text outline-none transition placeholder:text-placeholder focus:border-wallet focus:ring-4 focus:ring-wallet/20"
           />
+          <FilterSelect id="status-filter" label="Status" value={tab} onChange={filterBy(setTab)}>
+            {STATUS_OPTIONS.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </FilterSelect>
         </div>
 
+        {!loading && filtered.length > 0 && (
+          <div className="mt-4 flex items-center justify-between gap-3 text-sm">
+            <p className="min-w-0 text-muted">
+              <span className="font-bold text-text">
+                {filtered.length} {filtered.length === 1 ? 'account' : 'accounts'}
+              </span>
+              {activeFilters.length > 0 && ` · ${activeFilters.join(' · ')}`}
+            </p>
+            {!isDefault && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="-my-3 shrink-0 cursor-pointer py-3 font-bold text-wallet hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        )}
 
         {loading ? (
-          <Skeleton className="h-72" />
+          <Skeleton className="mt-4 h-72" />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="relative mt-4 overflow-x-auto">
             <table className="w-full min-w-[840px] border-collapse text-left">
               <thead>
                 <tr className="border-t border-divider text-xs font-bold tracking-wider text-muted uppercase">
@@ -144,8 +158,22 @@ export default function StaffAccounts() {
               <tbody>
                 {shown.length === 0 && (
                   <tr className="border-t border-divider">
-                    <td colSpan={5} className="py-10 text-center text-muted">
-                      {accounts.length === 0 ? 'No accounts yet.' : 'No accounts match these filters.'}
+                    <td colSpan={5} className="py-12">
+                      <div className="flex flex-col items-center gap-3 text-center">
+                        {accounts.length === 0 ? (
+                          <p className="text-[15px] font-semibold text-text">No accounts yet</p>
+                        ) : (
+                          <>
+                            <p className="text-[15px] font-semibold text-text">No accounts match your filters</p>
+                            <p className="max-w-xs text-sm text-muted">Try a different search, or clear the filters.</p>
+                            {!isDefault && (
+                              <Button variant="secondary" onClick={clearFilters}>
+                                Clear filters
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -215,9 +243,7 @@ export default function StaffAccounts() {
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-divider pt-5">
           <p className="text-sm text-muted">
-            {filtered.length === 0
-              ? 'Showing 0'
-              : `Showing ${current * PAGE_SIZE + 1}–${current * PAGE_SIZE + shown.length} of ${filtered.length}`}
+            Page {current + 1} of {pages}
           </p>
           <div className="flex gap-2">
             <Button variant="secondary" disabled={current === 0} onClick={() => setPage(current - 1)}>
