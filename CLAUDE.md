@@ -97,7 +97,7 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 
 **Customer profile**
 
-- `PATCH /users/me` (name, email, contact number)
+- `PATCH /users/me` (customers only; staff and admins get 403) with `{ name, email, contactNumber }`: name and email required, email lowercased; `contactNumber` is `09XXXXXXXXX` or `+639XXXXXXXXX` (saved as `09…`), and empty or missing removes it. Another active user with the same email or number gives 409 "Email or contact number already used". Answers with the updated user, the same shape as `/auth/me`. The profile card edits these in place.
 - `PATCH /users/me/password`
 - `PATCH /users/me/notification-preferences`
 - `PATCH /users/me/deactivate`

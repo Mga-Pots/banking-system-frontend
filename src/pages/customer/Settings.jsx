@@ -1,8 +1,8 @@
 import NotificationPreferences from "../../components/customer/NotificationPreferences";
 import ProfileDetails from "../../components/ProfileDetails";
 
-// Profile & settings. Read-only: the backend has no endpoint to change a name, email,
-// contact number or password, and none to deactivate an account.
+// Profile & settings. The details card lets the customer edit their name, email and
+// mobile (PATCH /users/me); changing the password and deactivating aren't built yet.
 export default function Settings() {
   return (
     <div>
