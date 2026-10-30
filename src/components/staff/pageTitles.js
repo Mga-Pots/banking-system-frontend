@@ -4,6 +4,7 @@ const titles = {
   '/staff/customers': 'Customers',
   '/staff/accounts': 'Accounts',
   '/staff/transactions': 'Transactions',
+  '/staff/settings': 'Profile',
 }
 
 export const titleFor = (pathname) => {
