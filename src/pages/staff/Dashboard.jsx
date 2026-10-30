@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Amount from '../../components/ui/Amount'
+import Sensitive from '../../components/ui/Sensitive'
 import Skeleton from '../../components/ui/Skeleton'
 import ErrorState from '../../components/ui/ErrorState'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -175,7 +176,7 @@ export default function StaffDashboard() {
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         {/* A container: rows switch layout on the card's own width, which is narrow on
             phones and also at 1024px, where the 320px column takes the room. */}
-        <Card className="@container min-w-0">
+        <Card className="@container min-w-0" aria-busy={sections.transactions.status === 'loading'}>
           <CardHeader title="Transfers to review" label="See all transfers to review" to="/staff/transactions" />
           {sections.transactions.status === 'loading' ? (
             <Skeleton className="h-40" />
@@ -187,45 +188,53 @@ export default function StaffDashboard() {
             </p>
           ) : (
             <ul>
-              {toReview.map((t) => (
+              {toReview.map((t) => {
+                const from = ownerOf(accountIdOf(t.sourceAccount))?.name ?? 'Unknown'
+                const to = ownerOf(accountIdOf(t.destinationAccount))?.name ?? 'Unknown'
                 // Narrow card: names and date get the whole first line; badge, amount and
                 // Review share the second. Wide card (@xl): everything on one line.
                 // Below @sm the icon goes (the badge already says held or flagged), so
                 // the second line has the full width on phones.
-                <li
-                  key={t._id}
-                  className="grid grid-cols-1 items-center gap-x-4 gap-y-3 border-t border-divider py-4 @sm:grid-cols-[auto_1fr] @xl:grid-cols-[auto_1fr_auto_auto_auto]"
-                >
-                  <div className="hidden @sm:block">
-                    <RowIcon icon={t.status === 'flagged' ? FlagIcon : ShieldIcon} />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-[15px] font-semibold text-text">
-                      {ownerOf(accountIdOf(t.sourceAccount))?.name ?? 'Unknown'} →{' '}
-                      {ownerOf(accountIdOf(t.destinationAccount))?.name ?? 'Unknown'}
-                    </p>
-                    <p className="truncate text-sm text-muted">
-                      {formatTransactionDate(t.createdAt)}
-                      {t.flagReason && ` · ${t.flagReason}`}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 @sm:col-start-2 @xl:contents">
-                    <div className="flex items-center gap-3 @xl:contents">
-                      <StatusBadge status={t.status} />
-                      <Amount centavos={t.amount} sensitive className="font-brand text-[15px] font-semibold text-text" />
+                return (
+                  <li
+                    key={t._id}
+                    className="grid grid-cols-1 items-center gap-x-4 gap-y-3 border-t border-divider py-4 @sm:grid-cols-[auto_1fr] @xl:grid-cols-[auto_1fr_auto_auto_auto]"
+                  >
+                    <div className="hidden @sm:block">
+                      <RowIcon icon={t.status === 'flagged' ? FlagIcon : ShieldIcon} />
                     </div>
-                    <Button className="ml-auto" onClick={() => setDialog({ type: 'review', item: t })}>
-                      Review
-                    </Button>
-                  </div>
-                </li>
-              ))}
+                    <div className="min-w-0">
+                      <p className="truncate text-[15px] font-semibold text-text">
+                        {from} <span aria-hidden="true">→</span>
+                        <span className="sr-only">to</span> {to}
+                      </p>
+                      <p className="truncate text-sm text-muted">
+                        {formatTransactionDate(t.createdAt)}
+                        {t.flagReason && ` · ${t.flagReason}`}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 @sm:col-start-2 @xl:contents">
+                      <div className="flex items-center gap-3 @xl:contents">
+                        <StatusBadge status={t.status} />
+                        <Amount centavos={t.amount} sensitive className="font-brand text-[15px] font-semibold text-text" />
+                      </div>
+                      <Button
+                        className="ml-auto"
+                        aria-label={`Review transfer from ${from} to ${to}`}
+                        onClick={() => setDialog({ type: 'review', item: t })}
+                      >
+                        Review
+                      </Button>
+                    </div>
+                  </li>
+                )
+              })}
             </ul>
           )}
         </Card>
 
         <div className="flex min-w-0 flex-col gap-6">
-          <Card>
+          <Card aria-busy={sections.customers.status === 'loading'}>
             <CardHeader title="To verify" label="See all customers" to="/staff/customers" />
             {sections.customers.status === 'loading' ? (
               <Skeleton className="h-32" />
@@ -246,13 +255,17 @@ export default function StaffDashboard() {
                     <div className="min-w-0 flex-1">
                       <Link
                         to={`/staff/customers/${c._id}`}
-                        className="block truncate text-[15px] font-semibold text-text underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
+                        className="-my-1 block truncate py-1 text-[15px] font-semibold text-text underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
                       >
                         {c.name}
                       </Link>
                       <p className="truncate text-sm text-muted">Joined {shortDate(c.createdAt)}</p>
                     </div>
-                    <Button variant="secondary" onClick={() => setDialog({ type: 'verify', item: c })}>
+                    <Button
+                      variant="secondary"
+                      aria-label={`Verify ${c.name}`}
+                      onClick={() => setDialog({ type: 'verify', item: c })}
+                    >
                       Verify
                     </Button>
                   </li>
@@ -261,7 +274,7 @@ export default function StaffDashboard() {
             )}
           </Card>
 
-          <Card>
+          <Card aria-busy={sections.accounts.status === 'loading'}>
             <CardHeader title="Frozen accounts" label="See all accounts" to="/staff/accounts" />
             {sections.accounts.status === 'loading' ? (
               <Skeleton className="h-24" />
@@ -275,10 +288,19 @@ export default function StaffDashboard() {
                   <li key={a._id} className="flex items-center gap-4 border-t border-divider py-4">
                     <RowIcon icon={SnowIcon} />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[15px] font-semibold text-text">{ownerOf(a._id)?.name ?? 'Unknown owner'}</p>
-                      <p className="truncate text-sm text-muted tabular-nums">{maskAccountNumber(a.accountNumber)}</p>
+                      {/* Wraps instead of truncating: the wide Reactivate button leaves the
+                          320px column little room, and a cut-off name is no use */}
+                      <p className="text-[15px] font-semibold break-words text-text">{ownerOf(a._id)?.name ?? 'Unknown owner'}</p>
+                      {/* Follows the hide-details eye like the rest of the page */}
+                      <p className="truncate text-sm text-muted tabular-nums">
+                        <Sensitive mask={maskAccountNumber(a.accountNumber)}>{formatAccountNumber(a.accountNumber)}</Sensitive>
+                      </p>
                     </div>
-                    <Button variant="secondary" onClick={() => setDialog({ type: 'account', item: a })}>
+                    <Button
+                      variant="secondary"
+                      aria-label={ownerOf(a._id)?.name ? `Reactivate ${ownerOf(a._id).name}’s account` : 'Reactivate this account'}
+                      onClick={() => setDialog({ type: 'account', item: a })}
+                    >
                       Reactivate
                     </Button>
                   </li>
