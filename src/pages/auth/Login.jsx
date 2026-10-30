@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import AuthLayout from '../../components/auth/AuthLayout'
 import PasswordInput from '../../components/auth/PasswordInput'
@@ -11,6 +11,8 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export default function Login() {
   const { login, role } = useAuth()
   const navigate = useNavigate()
+  // A message from the page that sent the user here, like after deactivating an account.
+  const notice = useLocation().state?.notice
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -53,6 +55,12 @@ export default function Login() {
           <h2 className="mb-1.5 text-[30px] font-extrabold tracking-[-0.8px]">Log in to sinop</h2>
           <p className="text-[15px] text-muted">Welcome back! Enter your details to continue.</p>
         </div>
+
+        {notice && (
+          <p role="status" className="rounded-xl bg-status-cancelled px-4 py-3 text-sm font-semibold text-status-cancelled-text">
+            {notice}
+          </p>
+        )}
 
         <div className="flex flex-col gap-2">
           <label htmlFor="email" className={labelClass}>
