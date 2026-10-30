@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Amount from '../../components/ui/Amount'
@@ -17,6 +18,7 @@ import { formatTransactionDate } from '../../utils/formatDate'
 import { LOADING, keepData, retrying, settle } from '../../utils/loadResults'
 
 const PAGE_SIZE = 10
+const SEARCH_DELAY_MS = 300
 
 // "Needs review" is what staff open the page for: transfers still pending or flagged.
 const needsReview = (tx) => reviewActionsFor(tx).length > 0
@@ -29,17 +31,18 @@ const TYPE_OPTIONS = [
   ['cash_in', 'Cash in'],
 ]
 
+// Pending and flagged have no options of their own: Needs review covers both, and each
+// row's badge still says which one it is.
 const STATUS_OPTIONS = [
   ['all', 'Status: All'],
   ['review', 'Needs review'],
   ['completed', 'Completed'],
-  ['pending', 'Pending'],
-  ['flagged', 'Flagged'],
   ['failed', 'Failed'],
   ['cancelled', 'Cancelled'],
 ]
 
 const inStatus = (tx, s) => (s === 'review' ? needsReview(tx) : s === 'all' || tx.status === s)
+const isOption = (options, value) => options.some(([v]) => v === value)
 
 // Every transaction, newest first. Staff approve, flag or cancel held transfers here.
 export default function StaffTransactions() {
@@ -47,10 +50,57 @@ export default function StaffTransactions() {
   const { hidden } = usePrivacy()
   // Accounts only give the owners' names, so the list still shows without them.
   const [sections, setSections] = useState({ transactions: LOADING, accounts: LOADING })
-  const [type, setType] = useState('any')
-  const [status, setStatus] = useState('review')
-  const [search, setSearch] = useState('')
-  const [page, setPage] = useState(0)
+  const [params, setParams] = useSearchParams()
+
+  // The filters live in the URL (?status=&type=&q=&page=), so a refresh, the back button
+  // after opening a customer, or a shared link keeps them. Anything unknown falls back
+  // to the default: Needs review, every type, page 1.
+  const status = isOption(STATUS_OPTIONS, params.get('status')) ? params.get('status') : 'review'
+  const type =
+    isOption(TYPE_OPTIONS, params.get('type')) && !(params.get('type') === 'cash_in' && status === 'review')
+      ? params.get('type')
+      : 'any'
+  const q = params.get('q') ?? ''
+  const page = Math.max(0, (parseInt(params.get('page'), 10) || 1) - 1)
+
+  // Changes some params and keeps the rest (like ?scenario=). A default value removes it.
+  const update = useCallback(
+    (changes, { replace = false } = {}) =>
+      setParams(
+        (previous) => {
+          const next = new URLSearchParams(previous)
+          Object.entries(changes).forEach(([key, value]) => {
+            if (value) next.set(key, String(value))
+            else next.delete(key)
+          })
+          return next
+        },
+        { replace },
+      ),
+    [setParams],
+  )
+
+  // Search filters as you type; the URL catches up after a short pause, without
+  // adding a history entry per letter.
+  const [search, setSearch] = useState(q)
+  const committed = useRef(q)
+  useEffect(() => {
+    // The URL changed on its own (back/forward, Clear filters): follow it.
+    if (q !== committed.current) {
+      committed.current = q
+      setSearch(q)
+    }
+  }, [q])
+  useEffect(() => {
+    const wanted = search.trim()
+    if (wanted === committed.current) return
+    const timer = setTimeout(() => {
+      committed.current = wanted
+      update({ q: wanted, page: '' }, { replace: true })
+    }, SEARCH_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [search, update])
+
   const [reviewing, setReviewing] = useState(null) // the transaction open in the dialog
 
   const load = useCallback(
@@ -73,25 +123,31 @@ export default function StaffTransactions() {
     load()
   }
 
-  // Any filter change goes back to the first page
-  const filterBy = (setter) => (value) => {
-    setter(value)
-    setPage(0)
-  }
+  // Any filter change goes back to the first page. Defaults are left out of the URL.
+  // Cash ins never need review, so Needs review and Cash in together would always be
+  // empty. Whichever one is picked second wins: Cash in switches the status to All,
+  // and Needs review switches the type back to All.
+  const pickType = (value) =>
+    update({
+      type: value === 'any' ? '' : value,
+      ...(value === 'cash_in' && status === 'review' && { status: 'all' }),
+      page: '',
+    })
 
-  // Cash ins never need review, so that pair would always be empty: picking
-  // Needs review while Cash in is on shows every type instead.
-  const pickStatus = (value) => {
-    if (value === 'review' && type === 'cash_in') setType('any')
-    filterBy(setStatus)(value)
-  }
+  const pickStatus = (value) =>
+    update({
+      status: value === 'review' ? '' : value,
+      ...(value === 'review' && type === 'cash_in' && { type: '' }),
+      page: '',
+    })
 
-  const isDefault = status === 'review' && type === 'any' && !search
+  const goToPage = (index) => update({ page: index > 0 ? index + 1 : '' })
+
+  const isDefault = status === 'review' && type === 'any' && !search.trim()
   const clearFilters = () => {
-    setType('any')
-    setStatus('review')
+    committed.current = ''
     setSearch('')
-    setPage(0)
+    update({ status: '', type: '', q: '', page: '' })
   }
 
   const transactions = sections.transactions.data ?? []
@@ -130,7 +186,7 @@ export default function StaffTransactions() {
   const labelOf = (options, value) => options.find(([v]) => v === value)?.[1]
   const activeFilters = [
     type !== 'any' && labelOf(TYPE_OPTIONS, type),
-    status === 'review' ? 'Needs review (waiting for approval or flagged)' : status !== 'all' && labelOf(STATUS_OPTIONS, status),
+    status === 'review' ? 'Needs review (pending or flagged)' : status !== 'all' && labelOf(STATUS_OPTIONS, status),
     query && `“${search.trim()}”`,
   ].filter(Boolean)
 
@@ -142,22 +198,39 @@ export default function StaffTransactions() {
     return <ErrorState title="We couldn’t load transactions" message={sections.transactions.error} onRetry={retry} />
   }
 
+  // A refresh (after a review, say) failed, but the last list is still on screen.
+  const staleError = sections.transactions.status === 'error' ? sections.transactions.error : ''
+
   return (
     <>
-      <Card>
+      {staleError && (
+        <div
+          role="alert"
+          className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-status-failed px-5 py-4 text-sm font-semibold text-status-failed-text"
+        >
+          <span>Couldn’t refresh, so this list may be out of date: {staleError}</span>
+          <button type="button" onClick={retry} className="-my-3 cursor-pointer py-3 underline">
+            Try again
+          </button>
+        </div>
+      )}
+
+      <Card aria-busy={loading}>
+        <p role="status" className="sr-only">
+          {loading ? '' : `${filtered.length} ${filtered.length === 1 ? 'transaction' : 'transactions'} found.`}
+        </p>
         <div className="flex flex-col gap-3 lg:flex-row">
           <SearchInput
             id="transaction-search"
             label="Search transactions"
             value={search}
-            onChange={filterBy(setSearch)}
+            onChange={setSearch}
             placeholder="Search reference, account number or name"
           />
-          <FilterSelect id="type-filter" label="Type" value={type} onChange={filterBy(setType)}>
+          <FilterSelect id="type-filter" label="Type" value={type} onChange={pickType}>
             {TYPE_OPTIONS.map(([value, label]) => (
-              // Cash ins never need review, so that pair could only ever be empty.
-              <option key={value} value={value} disabled={value === 'cash_in' && status === 'review'}>
-                {value === 'cash_in' && status === 'review' ? 'Cash in (never needs review)' : label}
+              <option key={value} value={value}>
+                {label}
               </option>
             ))}
           </FilterSelect>
@@ -294,10 +367,10 @@ export default function StaffTransactions() {
             Page {current + 1} of {pages}
           </p>
           <div className="flex gap-2">
-            <Button variant="secondary" disabled={current === 0} onClick={() => setPage(current - 1)}>
+            <Button variant="secondary" disabled={current === 0} onClick={() => goToPage(current - 1)}>
               Previous
             </Button>
-            <Button variant="secondary" disabled={current >= pages - 1} onClick={() => setPage(current + 1)}>
+            <Button variant="secondary" disabled={current >= pages - 1} onClick={() => goToPage(current + 1)}>
               Next
             </Button>
           </div>
