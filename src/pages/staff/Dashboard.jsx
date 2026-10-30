@@ -47,16 +47,19 @@ function SectionError({ title, section, onRetry }) {
   return <ErrorState compact title={title} message={section.error} onRetry={onRetry} className="border-t border-divider pt-4" />
 }
 
-function CardHeader({ title, link, to }) {
+// "See all" like the customer overview, so the 320px column's titles don't wrap.
+// `label` names the destination for screen readers, since every link reads "See all".
+function CardHeader({ title, label, to }) {
   return (
     <div className="flex items-center justify-between gap-4 pb-2">
       <h2 className="text-xl font-bold text-text">{title}</h2>
       {to && (
         <Link
           to={to}
-          className="-my-3 inline-flex items-center gap-1 py-3 text-sm font-bold text-wallet hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
+          aria-label={label}
+          className="-my-3 inline-flex shrink-0 items-center gap-1 py-3 text-sm font-bold text-wallet hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
         >
-          {link}
+          See all
           <ChevronDownIcon size={16} className="-rotate-90" />
         </Link>
       )}
@@ -154,7 +157,9 @@ export default function StaffDashboard() {
       {/* One card, not a row of tiles: the counts are a summary of the lists below.
           Needs review covers held and flagged transfers, as on the Transactions page. */}
       <Card className="mb-6">
-        <dl className="divide-y divide-divider sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {/* From lg the last column is 295px: its divider then sits on the edge of the
+            320px column below, and its text lines up with that card's text. */}
+        <dl className="divide-y divide-divider sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-[1fr_1fr_295px]">
           <SummaryItem
             label="Needs review"
             value={toReview.length}
@@ -166,21 +171,22 @@ export default function StaffDashboard() {
         </dl>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      {/* Same columns as the customer and admin overviews */}
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <Card className="min-w-0">
-          <CardHeader title="Transfers to review" link="All transactions" to="/staff/transactions" />
+          <CardHeader title="Transfers to review" label="See all transfers to review" to="/staff/transactions" />
           {sections.transactions.status === 'loading' ? (
             <Skeleton className="h-40" />
           ) : !sections.transactions.data ? (
             <SectionError title="We couldn’t load transfers" section={sections.transactions} onRetry={retry} />
           ) : toReview.length === 0 ? (
-            <p className="border-t border-divider pt-4 text-muted">
+            <p className="border-t border-divider pt-4 text-[15px] text-muted">
               Nothing to review right now. <span lang="fil">Ayos!</span>
             </p>
           ) : (
             <ul>
               {toReview.map((t) => (
-                <li key={t._id} className="flex flex-wrap items-center gap-x-3.5 gap-y-2 border-t border-divider py-3.5">
+                <li key={t._id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-divider py-4">
                   <RowIcon icon={t.status === 'flagged' ? FlagIcon : ShieldIcon} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[15px] font-semibold text-text">
@@ -203,17 +209,17 @@ export default function StaffDashboard() {
 
         <div className="flex min-w-0 flex-col gap-6">
           <Card>
-            <CardHeader title="To verify" link="All customers" to="/staff/customers" />
+            <CardHeader title="To verify" label="See all customers" to="/staff/customers" />
             {sections.customers.status === 'loading' ? (
               <Skeleton className="h-32" />
             ) : !sections.customers.data ? (
               <SectionError title="We couldn’t load customers" section={sections.customers} onRetry={retry} />
             ) : toVerify.length === 0 ? (
-              <p className="border-t border-divider pt-4 text-muted">Everyone is verified.</p>
+              <p className="border-t border-divider pt-4 text-[15px] text-muted">Everyone is verified.</p>
             ) : (
               <ul>
                 {toVerify.map((c) => (
-                  <li key={c._id} className="flex items-center gap-3 border-t border-divider py-3">
+                  <li key={c._id} className="flex items-center gap-4 border-t border-divider py-4">
                     <span
                       aria-hidden="true"
                       className="flex size-10 shrink-0 items-center justify-center rounded-full bg-mint text-sm font-bold text-ink"
@@ -239,17 +245,17 @@ export default function StaffDashboard() {
           </Card>
 
           <Card>
-            <CardHeader title="Frozen accounts" link="All accounts" to="/staff/accounts" />
+            <CardHeader title="Frozen accounts" label="See all accounts" to="/staff/accounts" />
             {sections.accounts.status === 'loading' ? (
               <Skeleton className="h-24" />
             ) : !sections.accounts.data ? (
               <SectionError title="We couldn’t load accounts" section={sections.accounts} onRetry={retry} />
             ) : frozen.length === 0 ? (
-              <p className="border-t border-divider pt-4 text-muted">No frozen accounts.</p>
+              <p className="border-t border-divider pt-4 text-[15px] text-muted">No frozen accounts.</p>
             ) : (
               <ul>
                 {frozen.map((a) => (
-                  <li key={a._id} className="flex items-center gap-3 border-t border-divider py-3">
+                  <li key={a._id} className="flex items-center gap-4 border-t border-divider py-4">
                     <RowIcon icon={SnowIcon} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[15px] font-semibold text-text">{ownerOf(a._id)?.name ?? 'Unknown owner'}</p>
