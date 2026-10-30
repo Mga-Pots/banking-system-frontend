@@ -21,10 +21,11 @@ const PAGE_SIZE = 10
 // "Needs review" is what staff open the page for: transfers still pending or flagged.
 const needsReview = (tx) => reviewActionsFor(tx).length > 0
 
+// Same words as the table's Type column and the customer History filter.
 const TYPE_TABS = [
   ['any', 'All'],
-  ['transfer', 'Transfers'],
-  ['cash_in', 'Cash ins'],
+  ['transfer', 'Transfer'],
+  ['cash_in', 'Cash in'],
 ]
 
 const STATUS_OPTIONS = [
@@ -77,6 +78,21 @@ export default function StaffTransactions() {
     setPage(0)
   }
 
+  // Cash ins never need review, so that pair would always be empty: picking
+  // Needs review while Cash in is on shows every type instead.
+  const pickStatus = (value) => {
+    if (value === 'review' && type === 'cash_in') setType('any')
+    filterBy(setStatus)(value)
+  }
+
+  const isDefault = status === 'review' && type === 'any' && !search
+  const clearFilters = () => {
+    setType('any')
+    setStatus('review')
+    setSearch('')
+    setPage(0)
+  }
+
   const transactions = sections.transactions.data ?? []
   const accounts = sections.accounts.data ?? []
   const loading = sections.transactions.status === 'loading'
@@ -123,26 +139,42 @@ export default function StaffTransactions() {
 
   return (
     <>
-      <div role="group" aria-label="Show" className="mb-6 flex flex-wrap gap-2">
-        {TYPE_TABS.map(([value, label]) => {
-          const on = type === value
-          return (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={on}
-              onClick={() => filterBy(setType)(value)}
-              className={`inline-flex h-11 cursor-pointer items-center gap-2 rounded-full px-[18px] text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet ${
-                on ? 'bg-ink text-white' : 'border-[1.5px] border-field-line bg-white text-ink hover:bg-field'
-              }`}
-            >
-              {label}
-              <span className={`text-[13px] font-semibold ${on ? 'text-white/75' : 'text-muted'}`}>
-                {loading ? '–' : countType(value)}
-              </span>
-            </button>
-          )
-        })}
+      <div className="mb-6">
+        <div role="group" aria-label="Transaction type" className="flex flex-wrap gap-2">
+          {TYPE_TABS.map(([value, label]) => {
+            const on = type === value
+            const off = value === 'cash_in' && status === 'review'
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={on}
+                disabled={off}
+                aria-describedby={off ? 'review-hint' : undefined}
+                onClick={() => filterBy(setType)(value)}
+                className={`inline-flex h-11 items-center gap-2 rounded-full px-[18px] text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet ${
+                  on
+                    ? 'cursor-pointer bg-ink text-white'
+                    : off
+                      ? 'cursor-not-allowed border-[1.5px] border-divider bg-white text-muted'
+                      : 'cursor-pointer border-[1.5px] border-field-line bg-white text-ink hover:bg-field'
+                }`}
+              >
+                {label}
+                {!loading && !off && (
+                  <span className={`text-[13px] font-semibold ${on ? 'text-white/75' : 'text-muted'}`}>
+                    {countType(value)}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+        {status === 'review' && (
+          <p id="review-hint" className="mt-2.5 text-sm text-muted">
+            Needs review shows transfers waiting for approval or flagged for a check. Cash ins never need review.
+          </p>
+        )}
       </div>
 
       <Card>
@@ -160,7 +192,7 @@ export default function StaffTransactions() {
               className="h-12 w-full min-w-0 rounded-xl border-[1.5px] border-field-line bg-field px-4 text-[15px] text-text outline-none transition placeholder:text-placeholder focus:border-wallet focus:ring-4 focus:ring-wallet/20"
             />
           </div>
-          <FilterSelect id="status-filter" label="Status" value={status} onChange={filterBy(setStatus)}>
+          <FilterSelect id="status-filter" label="Status" value={status} onChange={pickStatus}>
             {STATUS_OPTIONS.map(([value, label]) => (
               <option key={value} value={value}>{label}</option>
             ))}
@@ -197,10 +229,29 @@ export default function StaffTransactions() {
               <tbody>
                 {shown.length === 0 && (
                   <tr className="border-t border-divider">
-                    <td colSpan={6} className="py-10 text-center text-muted">
-                      {status === 'review' && !query && type === 'any'
-                        ? 'Nothing needs review right now.'
-                        : 'No transactions match these filters.'}
+                    <td colSpan={6} className="py-12">
+                      <div className="flex flex-col items-center gap-3 text-center">
+                        {isDefault ? (
+                          <>
+                            <p className="text-[15px] font-semibold text-text">
+                              Nothing needs review right now. <span lang="fil">Ayos!</span>
+                            </p>
+                            <Button variant="secondary" onClick={() => pickStatus('all')}>
+                              Show all transactions
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-[15px] font-semibold text-text">No transactions match your filters</p>
+                            <p className="max-w-xs text-sm text-muted">
+                              Try a different search, or clear the filters to see what needs review.
+                            </p>
+                            <Button variant="secondary" onClick={clearFilters}>
+                              Clear filters
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )}
