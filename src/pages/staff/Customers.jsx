@@ -7,7 +7,7 @@ import ErrorState from '../../components/ui/ErrorState'
 import { useToast } from '../../components/ui/Toast'
 import AccountStatus from '../../components/customer/AccountStatus'
 import { IdCheck, UserStatus } from '../../components/admin/UserBadges'
-import FilterSelect from '../../components/staff/FilterSelect'
+import { FilterSelect, SearchInput } from '../../components/admin/AdminBits'
 import VerifyCustomerModal from '../../components/staff/VerifyCustomerModal'
 import { getCustomers } from '../../api/staff'
 import { formatAccountNumber } from '../../utils/formatAccountNumber'
@@ -18,6 +18,13 @@ const messageOf = (err) => err.response?.data?.message ?? err.message
 
 // Customers can be verified once their ID is checked, while their account is active.
 const canVerify = (c) => !c.isVerified && c.status === 'active'
+
+// Same filter bar as the admin pages and the other staff lists.
+const ID_OPTIONS = [
+  ['any', 'ID check: All'],
+  ['unverified', 'Unverified'],
+  ['verified', 'Verified'],
+]
 
 // Every customer, with their bank account. No balances here: those are on the
 // customer's own page (see "Data visibility" in docs/least-privilege-guide.md).
@@ -48,6 +55,13 @@ export default function StaffCustomers() {
     setPage(0)
   }
 
+  const isDefault = idFilter === 'any' && !search
+  const clearFilters = () => {
+    setIdFilter('any')
+    setSearch('')
+    setPage(0)
+  }
+
   const { customers } = data
   const loading = data.status === 'loading'
   const query = search.trim().toLowerCase()
@@ -63,6 +77,12 @@ export default function StaffCustomers() {
         (c.account?.accountNumber ?? '').includes(query.replace(/\s/g, '')),
     )
 
+  // "5 customers · Unverified · “juan”"
+  const activeFilters = [
+    idFilter !== 'any' && ID_OPTIONS.find(([v]) => v === idFilter)?.[1],
+    query && `“${search.trim()}”`,
+  ].filter(Boolean)
+
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const current = Math.min(page, pages - 1)
   const shown = filtered.slice(current * PAGE_SIZE, current * PAGE_SIZE + PAGE_SIZE)
@@ -74,31 +94,47 @@ export default function StaffCustomers() {
   return (
     <>
       <Card>
-        <div className="flex flex-col gap-3 pb-5 sm:flex-row">
-          <div className="flex-1">
-            <label htmlFor="customer-search" className="sr-only">
-              Search customers
-            </label>
-            <input
-              id="customer-search"
-              type="search"
-              value={search}
-              onChange={(e) => filterBy(setSearch)(e.target.value)}
-              placeholder="Search name, email, mobile or account number"
-              className="h-12 w-full min-w-0 rounded-xl border-[1.5px] border-field-line bg-field px-4 text-[15px] text-text outline-none transition placeholder:text-placeholder focus:border-wallet focus:ring-4 focus:ring-wallet/20"
-            />
-          </div>
+        <div className="flex flex-col gap-3 lg:flex-row">
+          <SearchInput
+            id="customer-search"
+            label="Search customers"
+            value={search}
+            onChange={filterBy(setSearch)}
+            placeholder="Search name, email, mobile or account number"
+          />
           <FilterSelect id="id-filter" label="ID check" value={idFilter} onChange={filterBy(setIdFilter)}>
-            <option value="any">ID check: All</option>
-            <option value="unverified">Unverified</option>
-            <option value="verified">Verified</option>
+            {ID_OPTIONS.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </FilterSelect>
         </div>
 
+        {!loading && filtered.length > 0 && (
+          <div className="mt-4 flex items-center justify-between gap-3 text-sm">
+            <p className="min-w-0 text-muted">
+              <span className="font-bold text-text">
+                {filtered.length} {filtered.length === 1 ? 'customer' : 'customers'}
+              </span>
+              {activeFilters.length > 0 && ` · ${activeFilters.join(' · ')}`}
+            </p>
+            {!isDefault && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="-my-3 shrink-0 cursor-pointer py-3 font-bold text-wallet hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        )}
+
         {loading ? (
-          <Skeleton className="h-72" />
+          <Skeleton className="mt-4 h-72" />
         ) : (
-          <div className="relative overflow-x-auto">
+          <div className="relative mt-4 overflow-x-auto">
             <table className="w-full min-w-[860px] border-collapse text-left">
               <thead>
                 <tr className="border-t border-divider text-xs font-bold tracking-wider text-muted uppercase">
@@ -115,8 +151,20 @@ export default function StaffCustomers() {
               <tbody>
                 {shown.length === 0 && (
                   <tr className="border-t border-divider">
-                    <td colSpan={6} className="py-10 text-center text-muted">
-                      {customers.length === 0 ? 'No customers yet.' : 'No customers match these filters.'}
+                    <td colSpan={6} className="py-12">
+                      <div className="flex flex-col items-center gap-3 text-center">
+                        {customers.length === 0 ? (
+                          <p className="text-[15px] font-semibold text-text">No customers yet</p>
+                        ) : (
+                          <>
+                            <p className="text-[15px] font-semibold text-text">No customers match your filters</p>
+                            <p className="max-w-xs text-sm text-muted">Try a different search, or clear the filters.</p>
+                            <Button variant="secondary" onClick={clearFilters}>
+                              Clear filters
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -183,9 +231,7 @@ export default function StaffCustomers() {
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-divider pt-5">
           <p className="text-sm text-muted">
-            {filtered.length === 0
-              ? 'Showing 0'
-              : `Showing ${current * PAGE_SIZE + 1}–${current * PAGE_SIZE + shown.length} of ${filtered.length}`}
+            Page {current + 1} of {pages}
           </p>
           <div className="flex gap-2">
             <Button variant="secondary" disabled={current === 0} onClick={() => setPage(current - 1)}>
