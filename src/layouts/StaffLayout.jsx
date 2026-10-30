@@ -14,7 +14,7 @@ export default function StaffLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   return (
-    <PrivacyProvider>
+    <PrivacyProvider switchable={false}>
       <ToastProvider>
         <div className="min-h-dvh bg-canvas text-text md:grid md:grid-cols-[232px_1fr]">
           <aside aria-label="Sidebar" className="sticky top-0 hidden h-dvh border-r border-divider bg-white md:block">

@@ -13,8 +13,12 @@ const readStored = () => {
   }
 }
 
-export function PrivacyProvider({ children }) {
-  const [hidden, setHidden] = useState(readStored)
+// `switchable={false}` turns the switch off for a whole area (staff pages have no eye
+// button: what staff see is decided by their role), so a "hide" saved on the customer
+// side can't hide details there with no way to show them again.
+export function PrivacyProvider({ switchable = true, children }) {
+  const [stored, setHidden] = useState(readStored)
+  const hidden = switchable && stored
 
   const toggle = useCallback(() => {
     const next = !hidden

@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useMatch, useNavigate } from 'react-router-dom'
-import { ChevronDownIcon, EyeIcon, EyeOffIcon, LogOutIcon } from '../ui/Icons'
+import { ChevronDownIcon, LogOutIcon } from '../ui/Icons'
 import { useAuth } from '../../context/AuthContext'
-import { usePrivacy } from '../../context/PrivacyContext'
 import { initialsOf } from '../../utils/names'
 import { titleFor } from './pageTitles'
 
@@ -10,12 +9,10 @@ const greetingFor = (hour) =>
   hour < 12 ? 'Magandang umaga' : hour < 18 ? 'Magandang hapon' : 'Magandang gabi'
 
 // Top of every staff page, built like the admin header: greeting (or page title)
-// on the left; the "hide details" eye button and the account menu on the right.
-// The eye button is the same switch as on the customer dashboard: it hides every
-// <Sensitive> balance and account number, e.g. when someone can see the screen.
+// on the left, the account menu on the right. No "hide details" eye button: in a
+// bank's staff tools, what staff see is decided by their role, not a switch.
 export default function StaffHeader() {
   const { user, logout } = useAuth()
-  const { hidden, toggle } = usePrivacy()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const onOverview = Boolean(useMatch('/staff'))
@@ -65,16 +62,6 @@ export default function StaffHeader() {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <button
-          type="button"
-          onClick={toggle}
-          aria-label={hidden ? 'Show balances and account details' : 'Hide balances and account details'}
-          title={hidden ? 'Show balances and account details' : 'Hide balances and account details'}
-          className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-divider bg-white text-ink transition hover:bg-field focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
-        >
-          {hidden ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />}
-        </button>
-
         <div ref={menuRef} className="relative">
           <button
             type="button"
