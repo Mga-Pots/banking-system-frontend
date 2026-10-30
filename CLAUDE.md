@@ -98,9 +98,9 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 **Customer profile**
 
 - `PATCH /users/me` (customers only; staff and admins get 403) with `{ name, email, contactNumber }`: name and email required, email lowercased; `contactNumber` is `09XXXXXXXXX` or `+639XXXXXXXXX` (saved as `09…`), and empty or missing removes it. Another active user with the same email or number gives 409 "Email or contact number already used". Answers with the updated user, the same shape as `/auth/me`. The profile card edits these in place.
-- `PATCH /users/me/password`
+- `PATCH /users/me/password` (every role) with `{ currentPassword, newPassword }`: new is at least 8 characters (the UI also asks for a letter and a number, like Register); wrong current gives "Incorrect password", reusing it gives "Choose a password you haven't used here before". Answers `{ success: true, message }` with no data; the session stays valid. The backend sends a `security` notification.
 - `PATCH /users/me/notification-preferences`
-- `PATCH /users/me/deactivate`
+- `PATCH /users/me/deactivate` (customers only, no body): refused while the balance isn't 0 or a transfer in or out is `pending` or `flagged`. Otherwise the user becomes `deactivated` (login refuses them) and their bank account is frozen. Answers with the updated user. The UI then logs out and shows a notice on the login page.
 
 **Accounts**
 
