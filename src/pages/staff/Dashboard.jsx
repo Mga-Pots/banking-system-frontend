@@ -173,7 +173,9 @@ export default function StaffDashboard() {
 
       {/* Same columns as the customer and admin overviews */}
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <Card className="min-w-0">
+        {/* A container: rows switch layout on the card's own width, which is narrow on
+            phones and also at 1024px, where the 320px column takes the room. */}
+        <Card className="@container min-w-0">
           <CardHeader title="Transfers to review" label="See all transfers to review" to="/staff/transactions" />
           {sections.transactions.status === 'loading' ? (
             <Skeleton className="h-40" />
@@ -186,9 +188,18 @@ export default function StaffDashboard() {
           ) : (
             <ul>
               {toReview.map((t) => (
-                <li key={t._id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-divider py-4">
-                  <RowIcon icon={t.status === 'flagged' ? FlagIcon : ShieldIcon} />
-                  <div className="min-w-0 flex-1">
+                // Narrow card: names and date get the whole first line; badge, amount and
+                // Review share the second. Wide card (@xl): everything on one line.
+                // Below @sm the icon goes (the badge already says held or flagged), so
+                // the second line has the full width on phones.
+                <li
+                  key={t._id}
+                  className="grid grid-cols-1 items-center gap-x-4 gap-y-3 border-t border-divider py-4 @sm:grid-cols-[auto_1fr] @xl:grid-cols-[auto_1fr_auto_auto_auto]"
+                >
+                  <div className="hidden @sm:block">
+                    <RowIcon icon={t.status === 'flagged' ? FlagIcon : ShieldIcon} />
+                  </div>
+                  <div className="min-w-0">
                     <p className="truncate text-[15px] font-semibold text-text">
                       {ownerOf(accountIdOf(t.sourceAccount))?.name ?? 'Unknown'} →{' '}
                       {ownerOf(accountIdOf(t.destinationAccount))?.name ?? 'Unknown'}
@@ -198,9 +209,15 @@ export default function StaffDashboard() {
                       {t.flagReason && ` · ${t.flagReason}`}
                     </p>
                   </div>
-                  <StatusBadge status={t.status} />
-                  <Amount centavos={t.amount} sensitive className="font-brand text-[15px] font-semibold text-text" />
-                  <Button onClick={() => setDialog({ type: 'review', item: t })}>Review</Button>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 @sm:col-start-2 @xl:contents">
+                    <div className="flex items-center gap-3 @xl:contents">
+                      <StatusBadge status={t.status} />
+                      <Amount centavos={t.amount} sensitive className="font-brand text-[15px] font-semibold text-text" />
+                    </div>
+                    <Button className="ml-auto" onClick={() => setDialog({ type: 'review', item: t })}>
+                      Review
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
