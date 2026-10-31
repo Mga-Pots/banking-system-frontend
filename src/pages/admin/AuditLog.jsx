@@ -8,7 +8,7 @@ import { roleLabels } from '../../components/admin/roleLabels'
 import { useAuth } from '../../context/AuthContext'
 import { getAuditLogs, getUsers } from '../../api/admin'
 import { peopleIndex } from '../../utils/people'
-import { ACTION_LABELS, TYPE_LABELS, describeLog } from '../../utils/auditText'
+import { TYPE_LABELS, actionLabel, describeLog } from '../../utils/auditText'
 import { groupByDay, timeOf, withinDays } from '../../utils/dates'
 import { LOADING, keepData, retrying, settle } from '../../utils/loadResults'
 
@@ -50,6 +50,8 @@ export default function AdminAuditLog() {
   const logs = sections.logs.data ?? []
   const loading = sections.logs.status === 'loading'
   const userById = peopleIndex(sections.users.data ?? [], logs.flatMap((l) => [l.actorInfo, l.customerInfo]))
+  // The Action filter lists only actions that actually appear, sorted by label
+  const actionsInLog = [...new Set(logs.map((l) => l.action))].sort((x, y) => actionLabel(x).localeCompare(actionLabel(y)))
   const actors = [...new Set(logs.map((l) => l.actor))].filter((id) => userById[id])
   const q = search.trim().toLowerCase()
   const rows = logs
@@ -75,9 +77,9 @@ export default function AdminAuditLog() {
           <SearchInput id="audit-search" label="Search the audit log" value={search} onChange={filterBy(setSearch)} placeholder="Search by name or ID" />
           <FilterSelect id="action-filter" label="Action" value={action} onChange={filterBy(setAction)}>
             <option value="any">Action: All</option>
-            {Object.entries(ACTION_LABELS).map(([value, label]) => (
+            {actionsInLog.map((value) => (
               <option key={value} value={value}>
-                {label}
+                {actionLabel(value)}
               </option>
             ))}
           </FilterSelect>
@@ -110,14 +112,14 @@ export default function AdminAuditLog() {
           <Skeleton className="h-72" />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] border-collapse text-left">
+            <table className="w-full min-w-[520px] border-collapse text-left">
               <thead>
                 <tr className="border-t border-divider text-xs font-bold tracking-wider text-muted uppercase">
-                  <th scope="col" className="w-[100px] py-3 pr-4 font-bold">When</th>
+                  <th scope="col" className="w-[90px] py-3 pr-4 font-bold">When</th>
                   <th scope="col" className="w-[24%] py-3 pr-4 font-bold">Who</th>
                   <th scope="col" className="py-3 pr-4 font-bold">What happened</th>
                   <th scope="col" className="w-[26%] py-3 pr-4 font-bold">To</th>
-                  <th scope="col" className="w-[120px] py-3 text-right font-bold">Type</th>
+                  <th scope="col" className="hidden w-[120px] py-3 text-right font-bold xl:table-cell">Type</th>
                 </tr>
               </thead>
               <tbody>
@@ -172,7 +174,7 @@ export default function AdminAuditLog() {
                             </span>
                           )}
                         </td>
-                        <td className="py-3 text-right">
+                        <td className="hidden py-3 text-right xl:table-cell">
                           <Tag>{TYPE_LABELS[log.targetType] ?? log.targetType}</Tag>
                         </td>
                       </tr>
