@@ -4,7 +4,7 @@ import Card from '../../components/ui/Card'
 import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
-import { CheckIcon, CopyIcon, KeyIcon, UserPlusIcon } from '../../components/ui/Icons'
+import { KeyIcon, UserPlusIcon } from '../../components/ui/Icons'
 import { createStaff } from '../../api/admin'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -36,32 +36,20 @@ function validate({ name, email, password }) {
 export default function AdminCreateStaff() {
   const navigate = useNavigate()
   const { showToast } = useToast()
-  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  // The temporary password is generated as soon as the page opens
+  const [form, setForm] = useState(() => ({ name: '', email: '', password: generatePassword() }))
   const [errors, setErrors] = useState({})
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-  const [visible, setVisible] = useState(false) // Show/Hide; a generated password starts shown
-  const [copied, setCopied] = useState(false)
+  const [visible, setVisible] = useState(true) // Show/Hide; starts shown so the admin can read it
 
   const generate = () => {
     setForm((current) => ({ ...current, password: generatePassword() }))
     setErrors((current) => ({ ...current, password: undefined }))
     setVisible(true)
-    setCopied(false)
-  }
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(form.password)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      setError('Couldn’t copy. Select the password and copy it yourself.')
-    }
   }
 
   const update = (field) => (e) => {
-    if (field === 'password') setCopied(false)
     setForm((current) => ({ ...current, [field]: e.target.value }))
     if (errors[field]) setErrors((current) => ({ ...current, [field]: undefined }))
   }
@@ -110,8 +98,8 @@ export default function AdminCreateStaff() {
                 errors.password
                   ? undefined
                   : form.password
-                    ? 'Copy it now and give it to them. It isn’t shown again after you create the account.'
-                    : 'At least 8 characters, with letters and numbers. Or generate one.'
+                    ? 'Give this to them. It isn’t shown again after you create the account.'
+                    : 'At least 8 characters, with letters and numbers. Or generate a new one.'
               }
               suffix={
                 <button
@@ -131,18 +119,9 @@ export default function AdminCreateStaff() {
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={generate}>
                 <KeyIcon size={16} />
-                {form.password ? 'Generate another' : 'Generate'}
+                {form.password ? 'Generate another' : 'Generate one'}
               </Button>
-              {form.password && (
-                <Button variant="secondary" onClick={copy}>
-                  {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
-                  {copied ? 'Copied' : 'Copy'}
-                </Button>
-              )}
             </div>
-            <span role="status" className="sr-only">
-              {copied ? 'Password copied' : ''}
-            </span>
           </div>
           {error && (
             <p role="alert" className="text-sm font-semibold text-error">
