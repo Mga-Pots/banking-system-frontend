@@ -6,4 +6,4 @@ Disallow: /customer
 Disallow: /staff
 Disallow: /admin
 
-Sitemap: https://sinop.vercel.app/sitemap.xml
+Sitemap: https://sinop-bank.vercel.app/sitemap.xml

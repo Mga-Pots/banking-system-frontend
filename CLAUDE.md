@@ -151,6 +151,17 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 
 If an endpoint or field changes, update this file and tell the backend pair, so both repos stay in sync.
 
+## Deployment
+
+- **Frontend:** Vercel project `sinop-bank` → `https://sinop-bank.vercel.app`. **Backend:** Render service `sinop-backend` → `https://sinop-backend.onrender.com` (the backend repo has its own notes).
+- **The addresses must match in these places.** If either host changes, change all of them:
+  - `vercel.json`: the Content-Security-Policy `connect-src` must list the Render URL, or the browser blocks every API call.
+  - `index.html` (`og:url`, `og:image`), `public/robots.txt` and `public/sitemap.xml`: the Vercel URL.
+  - Vercel environment variables: `VITE_API_URL` (the Render URL + `/api`, https), `VITE_SITE_URL` (the Vercel URL) and `VITE_USE_MOCK=false`. They are read at build time, so **redeploy** after changing one.
+  - Render environment variable `CLIENT_URL`: the Vercel URL, https, no trailing slash. The backend allows only that one origin, so Vercel preview URLs get CORS errors.
+- A Vercel build fails on purpose if `VITE_API_URL` isn't https or `VITE_USE_MOCK` is `true` (see `vite.config.js`).
+- Render's free plan sleeps after about 15 minutes idle; the first request takes up to a minute (the axios timeout is 70s). Wake it with `/api/health` before a demo.
+
 ## Git workflow
 
 - `main` is protected; work on `dev`.
