@@ -48,16 +48,24 @@ const idOf = (v) => (v && typeof v === 'object' ? String(v._id ?? v.id) : v)
 const personOf = (v) =>
   v && typeof v === 'object' ? { _id: idOf(v), name: v.name, email: v.email, role: v.role } : null
 
+// Backend action names, in any style ("Transfer Approved", "TRANSFER_APPROVED"),
+// mapped to the names the admin pages use. Includes the backend's "Acount" typo.
 const ACTION_NAMES = {
   STAFF_CREATED: 'staff.create',
   STAFF_STATUS_UPDATED: 'user.status_update',
   CUSTOMER_VERIFIED: 'user.verify',
-  ACCOUNT_FROZEN: 'account.status_update',
-  ACCOUNT_UNFROZEN: 'account.status_update',
-  ACCOUNT_CLOSED: 'account.status_update',
-  TRANSACTION_APPROVED: 'transaction.status_update',
-  TRANSACTION_REJECTED: 'transaction.status_update',
+  CUSTOMER_STATUS_UPDATED: 'customer.status_update',
+  ACCOUNT_FROZEN: 'account.freeze',
+  ACOUNT_FROZEN: 'account.freeze',
+  ACCOUNT_UNFROZEN: 'account.reactivate',
+  ACCOUNT_REACTIVATED: 'account.reactivate',
+  ACCOUNT_CLOSED: 'account.close',
+  TRANSFER_APPROVED: 'transaction.approve',
+  TRANSFER_REJECTED: 'transaction.reject',
+  TRANSFER_FLAGGED: 'transaction.flag',
 }
+const actionKey = (action) => String(action ?? '').trim().toUpperCase().replace(/[\s-]+/g, '_')
+const toAction = (action) => ACTION_NAMES[actionKey(action)] ?? action
 
 const fromBackendUser = (u) => ({ ...u, _id: idOf(u) })
 const fromBackendLog = (log) => ({
@@ -65,7 +73,7 @@ const fromBackendLog = (log) => ({
   actor: idOf(log.actor),
   actorInfo: personOf(log.actor),
   actorRole: log.actorRole ?? log.actor?.role,
-  action: ACTION_NAMES[log.action] ?? log.action,
+  action: toAction(log.action),
   targetType: log.targetType,
   targetId: idOf(log.targetId),
   // A transaction's reference number (TXN-...), when the backend includes it
