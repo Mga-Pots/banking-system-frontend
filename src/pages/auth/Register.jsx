@@ -3,6 +3,7 @@ import { flushSync } from "react-dom";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import AuthLayout from "../../components/auth/AuthLayout";
+import Seo from "../../components/Seo";
 import PasswordInput from "../../components/auth/PasswordInput";
 import RequiredMark from "../../components/auth/RequiredMark";
 import {
@@ -129,6 +130,7 @@ export default function Register() {
       title="Start saving the smart way."
       subtitle="Create your sinop account in a minute. All you need is your name and email."
     >
+      <Seo title="Create an account" path="/register" index />
       <form
         className="flex w-full max-w-[400px] flex-col gap-5"
         onSubmit={handleSubmit}

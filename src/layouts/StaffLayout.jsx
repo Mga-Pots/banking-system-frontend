@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 import Logo from '../components/auth/Logo'
 import Modal from '../components/ui/Modal'
+import Seo from '../components/Seo'
 import { MenuIcon } from '../components/ui/Icons'
 import { ToastProvider } from '../components/ui/Toast'
 import StaffHeader from '../components/staff/Header'
@@ -15,6 +16,7 @@ export default function StaffLayout() {
 
   return (
     <PrivacyProvider switchable={false}>
+      <Seo title="Staff" />
       <ToastProvider>
         <div className="min-h-dvh bg-canvas text-text md:grid md:grid-cols-[232px_1fr]">
           <aside aria-label="Sidebar" className="sticky top-0 hidden h-dvh border-r border-divider bg-white md:block">
