@@ -35,9 +35,11 @@ export function SearchInput({ id, label, value, onChange, placeholder }) {
 }
 
 // A compact dropdown for the filter bar (its label is for screen readers only).
+// Full width when the filters stack (phones, tablets, a window snapped to half the
+// screen); a fixed 192px once they sit in one row next to the search (1024px and up).
 export function FilterSelect({ id, label, value, onChange, children }) {
   return (
-    <div className="relative sm:w-48">
+    <div className="relative lg:w-48">
       <label htmlFor={id} className="sr-only">
         {label}
       </label>
