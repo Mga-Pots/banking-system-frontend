@@ -95,7 +95,7 @@ export default function AdminUsers() {
         </div>
       </div>
       <Card>
-        <div className="flex flex-col gap-3 pb-5 sm:flex-row">
+        <div className="flex flex-col gap-3 pb-5 lg:flex-row">
           <SearchInput id="user-search" label="Search users" value={search} onChange={setSearch} placeholder="Search name, email, or contact number" />
           <FilterSelect id="status-filter" label="Status" value={statusFilter} onChange={setStatusFilter}>
             <option value="any">Status: All</option>
