@@ -43,3 +43,9 @@
   --color-status-flagged: #ffedd5;
   --color-status-flagged-text: #9a3412;
 }
+
+/* The top bar (64px) stays pinned while the page scrolls. This keeps anything scrolled
+   or focused into view from landing underneath it. */
+html {
+  scroll-padding-top: 5rem;
+}

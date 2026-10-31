@@ -22,9 +22,9 @@ src/
   api/          axios instance + one file per resource (auth, accounts, transactions, notifications, users, admin)
   mocks/        mock data used when VITE_USE_MOCK=true
   context/      AuthContext (user, token, role, login, logout), PrivacyContext (hide balance and account details)
-  components/   shared components (Navbar, ProtectedRoute, etc.)
+  components/   shared components used by every role: Header (the slim pinned top bar: menu button and logo on phones, bell and avatar), PageTitle (the greeting or page title, which scrolls with the page), AccountMenu (avatar menu), ProfileDetails, ChangePassword; plus Navbar, ProtectedRoute, etc.
     ui/         reusable pieces: Button, Card, Input, Modal, Toast, StatusBadge, Amount, Sensitive, Skeleton, icons
-    customer/   customer dashboard pieces (Sidebar, Header, AccountCard, TransactionRow, QuickTransfer, ...)
+    customer/   customer dashboard pieces (Sidebar, HeaderActions, NotificationBell, AccountCard, TransactionRow, QuickTransfer, ...). staff/ and admin/ hold each role's Sidebar and pageTitles.
   layouts/      CustomerLayout, StaffLayout, AdminLayout
   pages/
     auth/       Login, Register

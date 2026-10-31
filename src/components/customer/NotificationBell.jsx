@@ -92,7 +92,10 @@ export default function NotificationBell({ active = false, className = '' }) {
       </button>
 
       {open && !active && (
-        <div className="absolute right-0 z-20 mt-2 w-[min(380px,calc(100vw-2rem))] overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-divider">
+        // On phones the panel is as wide as the screen (minus a 16px margin), but the bell sits
+        // left of the avatar (44px) and a 12px gap, so -right-14 (56px) pushes it back out to
+        // the screen's edge margin. From md there's room to its left, so it lines up with the bell.
+        <div className="absolute -right-14 z-20 mt-2 w-[min(380px,calc(100vw-2rem))] md:right-0 overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-divider">
           <p className="border-b border-divider px-4 py-3 text-sm font-bold text-text">Notifications</p>
 
           {status === 'loading' && (

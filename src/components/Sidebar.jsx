@@ -8,12 +8,13 @@ import Logo from './auth/Logo'
 // `onNavigate` runs after a link is pressed (the mobile menu uses it to close itself).
 export default function Sidebar({ home, links, onNavigate }) {
   return (
-    <div className="flex min-h-dvh flex-col gap-8 p-4">
-      <div>
+    <div className="flex min-h-dvh flex-col gap-8 px-4 pb-4">
+      {/* As tall as the page's top bar (64px), so the logo sits level with the avatar */}
+      <div className="flex h-16 items-center">
         <Link
           to={home}
           onClick={onNavigate}
-          className="flex items-center gap-2.5 self-start px-2 pt-2 font-brand text-[28px] font-bold tracking-[-0.8px] text-ink"
+          className="flex items-center gap-2.5 px-2 font-brand text-[28px] font-bold tracking-[-0.8px] text-ink"
         >
           <Logo size={36} />
           <span>sinop</span>

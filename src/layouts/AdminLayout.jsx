@@ -1,17 +1,20 @@
 import { useState } from 'react'
-import { Link, Outlet } from 'react-router-dom'
-import Logo from '../components/auth/Logo'
+import { Outlet } from 'react-router-dom'
+import AccountMenu from '../components/AccountMenu'
+import Header from '../components/Header'
+import PageTitle from '../components/PageTitle'
 import Modal from '../components/ui/Modal'
-import { MenuIcon } from '../components/ui/Icons'
 import { ToastProvider } from '../components/ui/Toast'
-import AdminHeader from '../components/admin/Header'
 import AdminSidebar from '../components/admin/Sidebar'
+import { titleFor } from '../components/admin/pageTitles'
 import { PrivacyProvider } from '../context/PrivacyContext'
 
-// Admin shell, copied from the customer one: sidebar on the left (a menu button on
-// small screens), the header on top, and the page below.
+// Admin shell, the same as the staff one: sidebar on the left (a menu button on
+// small screens), the slim top bar with the account menu pinned above the page, and the
+// page below, starting with its title.
 export default function AdminLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const actions = <AccountMenu />
 
   return (
     <PrivacyProvider>
@@ -22,23 +25,9 @@ export default function AdminLayout() {
           </aside>
 
           <div className="min-w-0">
-            <div className="flex items-center gap-3 border-b border-divider bg-white px-4 py-3 md:hidden">
-              <button
-                type="button"
-                onClick={() => setMenuOpen(true)}
-                aria-label="Open menu"
-                className="flex size-11 cursor-pointer items-center justify-center rounded-full text-ink transition hover:bg-mint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
-              >
-                <MenuIcon size={22} />
-              </button>
-              <Link to="/admin" className="-my-2 flex items-center gap-2 py-2 font-brand text-2xl font-bold text-ink">
-                <Logo size={32} />
-                <span>sinop</span>
-              </Link>
-            </div>
-
+            <Header home="/admin" onOpenMenu={() => setMenuOpen(true)} actions={actions} />
             <main className="px-4 py-6 sm:px-6 lg:px-8">
-              <AdminHeader />
+              <PageTitle home="/admin" titleFor={titleFor} />
               <Outlet />
             </main>
           </div>
