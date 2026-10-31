@@ -1,0 +1,9 @@
+# sinop: only the login and register pages are public.
+User-agent: *
+Allow: /login
+Allow: /register
+Disallow: /customer
+Disallow: /staff
+Disallow: /admin
+
+Sitemap: https://sinop.vercel.app/sitemap.xml

@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <!-- The sinop mark, the same as the Logo component (src/components/auth/Logo.jsx) -->
-  <rect width="100" height="100" rx="28" fill="#0B4A3B"/>
-  <path d="M63.9 26 A16 16 0 1 0 50 50 A16 16 0 1 1 36.1 74" fill="none" stroke="#FFFFFF" stroke-width="10" stroke-linecap="round"/>
-</svg>
