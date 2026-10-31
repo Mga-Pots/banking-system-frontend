@@ -4,6 +4,7 @@ import AccountMenu from '../components/AccountMenu'
 import Header from '../components/Header'
 import PageTitle from '../components/PageTitle'
 import Modal from '../components/ui/Modal'
+import Seo from '../components/Seo'
 import { ToastProvider } from '../components/ui/Toast'
 import AdminSidebar from '../components/admin/Sidebar'
 import { titleFor } from '../components/admin/pageTitles'
@@ -18,6 +19,7 @@ export default function AdminLayout() {
 
   return (
     <PrivacyProvider>
+      <Seo title="Admin" />
       <ToastProvider>
         <div className="min-h-dvh bg-canvas text-text md:grid md:grid-cols-[232px_1fr]">
           <aside aria-label="Sidebar" className="sticky top-0 hidden h-dvh border-r border-divider bg-white md:block">

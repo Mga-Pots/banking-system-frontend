@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import Header from '../components/Header'
 import PageTitle from '../components/PageTitle'
 import Modal from '../components/ui/Modal'
+import Seo from '../components/Seo'
 import { ToastProvider } from '../components/ui/Toast'
 import CustomerHeaderActions from '../components/customer/HeaderActions'
 import Sidebar from '../components/customer/Sidebar'
@@ -19,6 +20,7 @@ export default function CustomerLayout() {
 
   return (
     <PrivacyProvider>
+      <Seo title="My account" />
       <ToastProvider>
         <NotificationsProvider>
           <div className="min-h-dvh bg-canvas text-text md:grid md:grid-cols-[232px_1fr]">
