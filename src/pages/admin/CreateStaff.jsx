@@ -4,11 +4,22 @@ import Card from '../../components/ui/Card'
 import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/Toast'
-import { UserPlusIcon } from '../../components/ui/Icons'
+import { CheckIcon, CopyIcon, KeyIcon, UserPlusIcon } from '../../components/ui/Icons'
 import { createStaff } from '../../api/admin'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const BACK = '/admin/users' // after creating (or Cancel), Users opens on the Staff tab
+
+// A strong temporary password: 12 letters and digits, no look-alikes (0/O, 1/l/I),
+// always with at least one letter and one digit so it passes the rules below.
+const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+function generatePassword() {
+  for (;;) {
+    const bytes = crypto.getRandomValues(new Uint32Array(12))
+    const password = Array.from(bytes, (n) => CHARS[n % CHARS.length]).join('')
+    if (/[A-Za-z]/.test(password) && /\d/.test(password)) return password
+  }
+}
 
 function validate({ name, email, password }) {
   const errors = {}
@@ -29,8 +40,28 @@ export default function AdminCreateStaff() {
   const [errors, setErrors] = useState({})
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [visible, setVisible] = useState(false) // Show/Hide; a generated password starts shown
+  const [copied, setCopied] = useState(false)
+
+  const generate = () => {
+    setForm((current) => ({ ...current, password: generatePassword() }))
+    setErrors((current) => ({ ...current, password: undefined }))
+    setVisible(true)
+    setCopied(false)
+  }
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(form.password)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setError('Couldn’t copy. Select the password and copy it yourself.')
+    }
+  }
 
   const update = (field) => (e) => {
+    if (field === 'password') setCopied(false)
     setForm((current) => ({ ...current, [field]: e.target.value }))
     if (errors[field]) setErrors((current) => ({ ...current, [field]: undefined }))
   }
@@ -67,16 +98,52 @@ export default function AdminCreateStaff() {
           </div>
           <Input id="staff-name" label="Full name" value={form.name} onChange={update('name')} error={errors.name} autoComplete="off" />
           <Input id="staff-email" label="Work email" type="email" value={form.email} onChange={update('email')} error={errors.email} autoComplete="off" />
-          <Input
-            id="staff-password"
-            label="Temporary password"
-            type="password"
-            value={form.password}
-            onChange={update('password')}
-            error={errors.password}
-            hint={errors.password ? undefined : 'At least 8 characters, with letters and numbers.'}
-            autoComplete="new-password"
-          />
+          <div className="flex flex-col gap-2">
+            <Input
+              id="staff-password"
+              label="Temporary password"
+              type={visible ? 'text' : 'password'}
+              value={form.password}
+              onChange={update('password')}
+              error={errors.password}
+              hint={
+                errors.password
+                  ? undefined
+                  : form.password
+                    ? 'Copy it now and give it to them. It isn’t shown again after you create the account.'
+                    : 'At least 8 characters, with letters and numbers. Or generate one.'
+              }
+              suffix={
+                <button
+                  type="button"
+                  onClick={() => setVisible((shown) => !shown)}
+                  aria-label={visible ? 'Hide password' : 'Show password'}
+                  aria-pressed={visible}
+                  className="h-9 cursor-pointer rounded-[10px] bg-ground px-3 text-[13px] font-bold text-ink hover:bg-mint-mid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
+                >
+                  {visible ? 'Hide' : 'Show'}
+                </button>
+              }
+              autoComplete="new-password"
+              spellCheck={false}
+              className={visible ? 'font-mono tracking-wide' : ''}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={generate}>
+                <KeyIcon size={16} />
+                {form.password ? 'Generate another' : 'Generate'}
+              </Button>
+              {form.password && (
+                <Button variant="secondary" onClick={copy}>
+                  {copied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
+                  {copied ? 'Copied' : 'Copy'}
+                </Button>
+              )}
+            </div>
+            <span role="status" className="sr-only">
+              {copied ? 'Password copied' : ''}
+            </span>
+          </div>
           {error && (
             <p role="alert" className="text-sm font-semibold text-error">
               {error}
