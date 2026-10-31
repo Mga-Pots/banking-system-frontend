@@ -49,8 +49,13 @@ export default function Login() {
 
   return (
     <AuthLayout
-      title="Save a little, every day."
-      subtitle="Send money, cash in, and keep track of every peso, all in one place."
+      title="Start saving the smart way."
+      subtitle={
+        <>
+          <span lang="fil">Maging masinop sa pera.</span> Send money, cash in, and keep track of every peso, all in one
+          place.
+        </>
+      }
     >
       <Seo title="Log in" path="/login" index />
       <form className="flex w-full max-w-[400px] flex-col gap-5" onSubmit={handleSubmit} noValidate>
