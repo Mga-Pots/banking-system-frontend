@@ -2,6 +2,9 @@ import { useState } from 'react'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import Input from '../ui/Input'
+import DetailsList from '../ui/DetailsList'
+import { roleLabels } from './roleLabels'
+import { formatLongDate } from '../../utils/formatDate'
 import { updateUserStatus } from '../../api/admin'
 
 // Admins can only close staff accounts. Disable / turn back on was removed, and
@@ -9,8 +12,7 @@ import { updateUserStatus } from '../../api/admin'
 const ACTIONS = {
   close: {
     status: 'closed',
-    title: () => 'Close this staff account?',
-    body: (name) => `${name} loses access right away and is logged out. Their past work stays in the audit log.`,
+    title: () => 'Close this staff account permanently?',
     button: 'Close account',
     variant: 'danger',
     confirmWithEmail: true,
@@ -42,19 +44,25 @@ export default function UserStatusModal({ user, action, onClose, onSaved }) {
   return (
     <Modal title={a.title(user.name)} onClose={onClose}>
       <div className="flex flex-col gap-5">
-        {a.body && <p className="-mt-2 text-sm text-label">{a.body(user.name)}</p>}
+        {/* Who is being closed, like the staff Close account dialog (identity, no money) */}
+        <DetailsList
+          rows={[
+            ['Name', user.name],
+            ['Email', user.email],
+            ['Role', roleLabels[user.role] ?? user.role],
+            ...(user.createdAt ? [['Joined', formatLongDate(user.createdAt)]] : []),
+          ]}
+        />
         {a.confirmWithEmail && (
           <>
-            <p className="-mt-2 rounded-xl bg-status-failed px-4 py-3.5 text-sm font-semibold text-status-failed-text">
-              This can’t be undone. {user.name}’s records are kept, but the account can never be used again.
+            <p className="rounded-xl bg-status-failed px-4 py-3.5 text-sm font-semibold text-status-failed-text">
+              This can’t be undone. They lose access right away and are logged out. Their past work stays in the
+              audit log.
             </p>
             <Input
               id="close-confirm"
-              label={
-                <>
-                  Type <span className="font-mono">{user.email}</span> to confirm
-                </>
-              }
+              label="Type their email to confirm"
+              placeholder={user.email}
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               autoComplete="off"
