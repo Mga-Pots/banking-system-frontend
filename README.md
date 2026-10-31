@@ -13,9 +13,9 @@ Other scripts: `npm run build`, `npm run preview`, `npm run lint` (ESLint).
 
 ## Environment variables
 
-| Variable | Purpose |
-| --- | --- |
-| `VITE_API_URL` | Backend base URL, e.g. `http://localhost:5000/api` |
+| Variable        | Purpose                                                                                               |
+| --------------- | ----------------------------------------------------------------------------------------------------- |
+| `VITE_API_URL`  | Backend base URL, e.g. `http://localhost:5000/api`                                                    |
 | `VITE_USE_MOCK` | `true` = every API function returns mock data from `src/mocks/`; anything else calls the real backend |
 
 `.env` is git-ignored; `.env.example` is committed. Restart the dev server after changing `.env`.
@@ -24,11 +24,11 @@ Other scripts: `npm run build`, `npm run preview`, `npm run lint` (ESLint).
 
 With `VITE_USE_MOCK=true` any password works for these emails:
 
-| Role | Email | Dashboard |
-| --- | --- | --- |
+| Role     | Email              | Dashboard |
+| -------- | ------------------ | --------- |
 | customer | customer@bank.test | /customer |
-| staff | staff@bank.test | /staff |
-| admin | admin@bank.test | /admin |
+| staff    | staff@bank.test    | /staff    |
+| admin    | admin@bank.test    | /admin    |
 
 Registering creates a new customer. Mock data lives in memory and resets on page reload.
 

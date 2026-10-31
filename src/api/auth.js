@@ -3,10 +3,15 @@ import { USE_MOCK, mockResponse, mockError, getMockUser, withoutToken } from './
 import { users } from '../mocks/users'
 import { accounts } from '../mocks/accounts'
 
+// The backend stores emails lowercased and trimmed.
+const normalizeEmail = (email) => email.toLowerCase().trim()
+
 export const login = async ({ email, password }) => {
   if (USE_MOCK) {
-    const user = users.find((u) => u.email === email)
+    const user = users.find((u) => u.email === normalizeEmail(email))
     if (!user) return mockError('Invalid email or password')
+    // Same messages as the backend: closed accounts get their own message
+    if (user.status === 'closed') return mockError('This account is closed')
     if (user.status !== 'active') return mockError('This account is not active')
     return mockResponse({ user: withoutToken(user), token: user.token })
   }
@@ -14,29 +19,39 @@ export const login = async ({ email, password }) => {
 }
 
 // Registration is for customers only; one bank account is created automatically.
-export const register = async ({ name, email, password, contactNumber = '' }) => {
+// contactNumber is optional: leave it out (undefined) when the user didn't enter one.
+export const register = async ({ name, email, password, contactNumber }) => {
   if (USE_MOCK) {
-    if (users.some((u) => u.email === email)) return mockError('Email already registered')
+    const normalized = normalizeEmail(email)
+    const taken = users.some(
+      (u) => u.email === normalized || (contactNumber && u.contactNumber === contactNumber),
+    )
+    if (taken) return mockError('Email or contact number already used')
+    const now = new Date().toISOString()
     const id = `u${Date.now()}`
     const user = {
-      id,
-      name,
-      email,
-      contactNumber,
+      _id: id,
+      name: name.trim(),
+      email: normalized,
+      ...(contactNumber && { contactNumber }),
       role: 'customer',
       status: 'active',
-      verified: false,
+      isVerified: false,
       notificationPreferences: { email: true, sms: false },
+      createdAt: now,
+      updatedAt: now,
       token: `mock-token-${id}`,
     }
     users.push(user)
     const suffix = String(Date.now())
     accounts.push({
-      id: `a${id}`,
-      userId: id,
-      accountNumber: `1001-${suffix.slice(-8, -4)}-${suffix.slice(-4)}`,
+      _id: `a${id}`,
+      accountNumber: `00${suffix.slice(-10)}`, // 12 digits, like the backend
+      owner: id,
       balance: 0,
       status: 'active',
+      createdAt: now,
+      updatedAt: now,
     })
     return mockResponse({ user: withoutToken(user), token: user.token })
   }

@@ -4,6 +4,7 @@ export const TOKEN_KEY = 'token'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
+  timeout: 70000, // Render's free plan can take up to about a minute to wake up
 })
 
 api.interceptors.request.use((config) => {

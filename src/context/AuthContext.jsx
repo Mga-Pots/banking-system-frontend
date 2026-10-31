@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import * as authApi from '../api/auth'
 import { TOKEN_KEY } from '../api/axios'
 
@@ -32,23 +32,56 @@ export function AuthProvider({ children }) {
     [persist],
   )
 
-  const register = useCallback(
-    async (details) => persist((await authApi.register(details)).data),
-    [persist],
-  )
+  // Creates the account but doesn't log in: the new customer logs in on the next screen.
+  // The backend also sends a token here; it's left unused. Resolves to the new user.
+  const register = useCallback(async (details) => (await authApi.register(details)).data.user, [])
 
-  const logout = useCallback(() => {
-    // Tell the backend (best effort); the client token is cleared regardless.
-    authApi.logout(token).catch(() => {})
+  // After the user edits their own details: keep the session, swap in the new user.
+  const updateUser = useCallback((next) => {
+    localStorage.setItem(USER_KEY, JSON.stringify(next))
+    setUser(next)
+  }, [])
+
+  const clearSession = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
     setToken(null)
     setUser(null)
-  }, [token])
+  }, [])
+
+  const logout = useCallback(() => {
+    // Tell the backend (best effort); the client token is cleared regardless.
+    authApi.logout(token).catch(() => {})
+    clearSession()
+  }, [token, clearSession])
+
+  // On page load, the saved user is only a copy from the last login. Ask the backend
+  // for the current one (staff may have verified the customer since, for example),
+  // and end the session if the backend no longer accepts the token. If the backend
+  // can't be reached, keep the saved copy.
+  useEffect(() => {
+    if (!localStorage.getItem(TOKEN_KEY)) return
+    let stale = false
+    authApi
+      .getMe()
+      .then((res) => {
+        if (stale) return
+        localStorage.setItem(USER_KEY, JSON.stringify(res.data))
+        setUser(res.data)
+      })
+      .catch((err) => {
+        if (stale || !err.response) return
+        const status = err.response.status
+        if (!status || status === 401 || status === 403) clearSession()
+      })
+    return () => {
+      stale = true
+    }
+  }, [clearSession])
 
   const value = useMemo(
-    () => ({ user, token, role: user?.role ?? null, login, register, logout }),
-    [user, token, login, register, logout],
+    () => ({ user, token, role: user?.role ?? null, login, register, logout, updateUser }),
+    [user, token, login, register, logout, updateUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

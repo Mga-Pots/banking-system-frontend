@@ -1,114 +1,137 @@
 import api from './axios'
-import { USE_MOCK, mockResponse, mockError, withoutToken } from './helpers'
+import { USE_MOCK, mockResponse, mockError, withoutToken, getMockUser, logMock } from './helpers'
 import { users } from '../mocks/users'
-import { accounts } from '../mocks/accounts'
-import { transactions } from '../mocks/transactions'
 import { notifications } from '../mocks/notifications'
 import { auditLogs } from '../mocks/auditLogs'
 
-const USER_STATUSES = ['active', 'deactivated', 'disabled', 'closed']
-const ACCOUNT_STATUSES = ['active', 'frozen', 'closed']
-const TRANSACTION_STATUSES = ['pending', 'completed', 'failed', 'cancelled', 'flagged']
-const ROLES = ['customer', 'staff', 'admin']
+// Admin = IT and people: create and close staff accounts, see the user list (read-only),
+// and read-only review of the audit and notification logs. No money data at all.
+// Banking operations live in ./staff.js. See CLAUDE.md for the rules.
 
-// Looks up `id` in `list`, checks `value` is allowed, sets `field`, and returns the updated copy.
-const setMockField = (list, id, field, value, allowed, label) => {
-  const item = list.find((x) => x.id === id)
-  if (!item) return mockError(`${label} not found`)
-  if (!allowed.includes(value)) return mockError(`Invalid ${field}`)
-  item[field] = value
-  return mockResponse(item.token === undefined ? { ...item } : withoutToken(item))
-}
+// The admin user list only gets identity and access fields (data minimization).
+const IDENTITY_FIELDS = ['_id', 'name', 'email', 'contactNumber', 'role', 'status', 'isVerified', 'createdAt', 'updatedAt']
+const identityOnly = (user) => Object.fromEntries(IDENTITY_FIELDS.filter((f) => f in user).map((f) => [f, user[f]]))
 
-// admin only
+// The admin notification log is metadata only: the message can contain amounts.
+const notificationMeta = ({ _id, recipient, type, isRead, createdAt }) => ({ _id, recipient, type, isRead, createdAt })
+
 export const createStaff = async ({ name, email, password }) => {
   if (USE_MOCK) {
-    if (users.some((u) => u.email === email)) return mockError('Email already registered')
+    const normalized = email.toLowerCase().trim()
+    if (users.some((u) => u.email === normalized)) return mockError('Email already used')
+    const now = new Date().toISOString()
     const id = `u${Date.now()}`
+    // No contactNumber: it's optional, and staff accounts are created without one
     const staff = {
-      id,
-      name,
-      email,
-      contactNumber: '',
+      _id: id,
+      name: name.trim(),
+      email: normalized,
       role: 'staff',
       status: 'active',
-      verified: true,
+      isVerified: true,
       notificationPreferences: { email: true, sms: false },
+      createdAt: now,
+      updatedAt: now,
       token: `mock-token-${id}`,
     }
     users.push(staff)
-    return mockResponse(withoutToken(staff))
+    logMock('staff.create', 'User', id)
+    return mockResponse(identityOnly(staff))
   }
   return (await api.post('/admin/staff', { name, email, password })).data
 }
 
-// admin, staff
+// The real backend's admin endpoints send `id` (not `_id`), people as objects
+// ({ id, name, email, role }) and actions like "STAFF_CREATED". These turn that into
+// the shape the pages (and the mocks) use. Either shape works.
+const idOf = (v) => (v && typeof v === 'object' ? String(v._id ?? v.id) : v)
+const personOf = (v) =>
+  v && typeof v === 'object' ? { _id: idOf(v), name: v.name, email: v.email, role: v.role } : null
+
+// Backend action names, in any style ("Transfer Approved", "TRANSFER_APPROVED"),
+// mapped to the names the admin pages use. Includes the backend's "Acount" typo.
+const ACTION_NAMES = {
+  STAFF_CREATED: 'staff.create',
+  STAFF_STATUS_UPDATED: 'user.status_update',
+  CUSTOMER_VERIFIED: 'user.verify',
+  CUSTOMER_STATUS_UPDATED: 'customer.status_update',
+  ACCOUNT_FROZEN: 'account.freeze',
+  ACOUNT_FROZEN: 'account.freeze',
+  ACCOUNT_UNFROZEN: 'account.reactivate',
+  ACCOUNT_REACTIVATED: 'account.reactivate',
+  ACCOUNT_CLOSED: 'account.close',
+  TRANSFER_APPROVED: 'transaction.approve',
+  TRANSFER_REJECTED: 'transaction.reject',
+  TRANSFER_FLAGGED: 'transaction.flag',
+}
+const actionKey = (action) => String(action ?? '').trim().toUpperCase().replace(/[\s-]+/g, '_')
+const toAction = (action) => ACTION_NAMES[actionKey(action)] ?? action
+
+const fromBackendUser = (u) => ({ ...u, _id: idOf(u) })
+const fromBackendLog = (log) => ({
+  _id: idOf(log),
+  actor: idOf(log.actor),
+  actorInfo: personOf(log.actor),
+  actorRole: log.actorRole ?? log.actor?.role,
+  action: toAction(log.action),
+  targetType: log.targetType,
+  targetId: idOf(log.targetId),
+  // A transaction's reference number (TXN-...), when the backend includes it
+  reference: log.metadata?.referenceNumber ?? null,
+  // The customer an account or transaction belongs to, when the backend includes it
+  customer: idOf(log.metadata?.customer) ?? null,
+  customerInfo: log.metadata?.customer ? { ...personOf(log.metadata.customer), role: 'customer' } : null,
+  outcome: log.outcome,
+  createdAt: log.createdAt,
+})
+// Metadata only: the message is dropped even if the backend sends it.
+const fromBackendNotification = (n) => ({
+  _id: idOf(n),
+  recipient: idOf(n.recipient),
+  recipientInfo: personOf(n.recipient),
+  type: n.type,
+  isRead: n.isRead,
+  createdAt: n.createdAt,
+})
+const mapData = (res, fn) => ({ ...res, data: (res.data ?? []).map(fn) })
+
 export const getUsers = async () => {
-  if (USE_MOCK) return mockResponse(users.map(withoutToken))
-  return (await api.get('/admin/users')).data
+  if (USE_MOCK) return mockResponse(users.map((u) => identityOnly(withoutToken(u))))
+  return mapData((await api.get('/admin/users', { params: { limit: 100 } })).data, fromBackendUser)
 }
 
-// admin, staff
 export const getUserById = async (id) => {
   if (USE_MOCK) {
-    const user = users.find((u) => u.id === id)
-    return user ? mockResponse(withoutToken(user)) : mockError('User not found')
+    const user = users.find((u) => u._id === id)
+    return user ? mockResponse(identityOnly(user)) : mockError('User not found')
   }
   return (await api.get(`/admin/users/${id}`)).data
 }
 
-// admin
+// Close a staff account: PATCH /admin/staff/:id/status with { status: "closed" } only.
+// Disable / re-enable is gone; customers are closed by staff via their bank account.
 export const updateUserStatus = async (id, status) => {
-  if (USE_MOCK) return setMockField(users, id, 'status', status, USER_STATUSES, 'User')
-  return (await api.patch(`/admin/users/${id}/status`, { status })).data
-}
-
-// admin
-export const updateUserRole = async (id, role) => {
-  if (USE_MOCK) return setMockField(users, id, 'role', role, ROLES, 'User')
-  return (await api.patch(`/admin/users/${id}/role`, { role })).data
-}
-
-// admin, staff
-export const verifyUser = async (id) => {
-  if (USE_MOCK) return setMockField(users, id, 'verified', true, [true], 'User')
-  return (await api.patch(`/admin/users/${id}/verify`)).data
-}
-
-// admin, staff
-export const getAccounts = async () => {
-  if (USE_MOCK) return mockResponse(accounts.map((a) => ({ ...a })))
-  return (await api.get('/admin/accounts')).data
-}
-
-// admin, staff (freeze / reactivate)
-export const updateAccountStatus = async (id, status) => {
-  if (USE_MOCK) return setMockField(accounts, id, 'status', status, ACCOUNT_STATUSES, 'Account')
-  return (await api.patch(`/admin/accounts/${id}/status`, { status })).data
-}
-
-// admin, staff
-export const getAllTransactions = async () => {
-  if (USE_MOCK) return mockResponse(transactions.map((t) => ({ ...t })))
-  return (await api.get('/admin/transactions')).data
-}
-
-// admin, staff (flag or cancel)
-export const updateTransactionStatus = async (id, status) => {
   if (USE_MOCK) {
-    return setMockField(transactions, id, 'status', status, TRANSACTION_STATUSES, 'Transaction')
+    const user = users.find((u) => u._id === id)
+    if (!user) return mockError('User not found')
+    if (id === getMockUser()?._id) return mockError('You can’t change your own account status')
+    if (status !== 'closed') return mockError('Admins can only close staff accounts')
+    if (user.role !== 'staff') return mockError('Only staff accounts can be closed here')
+    if (user.status === 'closed') return mockError('This account is already closed')
+    user.status = status
+    user.updatedAt = new Date().toISOString()
+    logMock('user.status_update', 'User', id)
+    return mockResponse(identityOnly(user))
   }
-  return (await api.patch(`/admin/transactions/${id}/status`, { status })).data
+  return (await api.patch(`/admin/staff/${id}/status`, { status })).data
 }
 
-// admin
 export const getAuditLogs = async () => {
   if (USE_MOCK) return mockResponse(auditLogs.map((l) => ({ ...l })))
-  return (await api.get('/admin/audit-logs')).data
+  return mapData((await api.get('/admin/audit-logs', { params: { limit: 100 } })).data, fromBackendLog)
 }
 
-// admin
 export const getNotificationLogs = async () => {
-  if (USE_MOCK) return mockResponse(notifications.map((n) => ({ ...n })))
-  return (await api.get('/admin/notifications')).data
+  if (USE_MOCK) return mockResponse(notifications.map(notificationMeta))
+  return mapData((await api.get('/admin/notifications', { params: { limit: 100 } })).data, fromBackendNotification)
 }

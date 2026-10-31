@@ -12,7 +12,7 @@ The backend is a separate repo (Node.js + Express + MongoDB). This repo is the R
 
 ## Project status
 
-- **The UI design is NOT final.** Keep pages and layouts minimal and unstyled: headings, placeholder text, and basic working forms. Do not add custom colors, cards, or polished layouts until the team finalizes the design.
+- **The customer UI design is approved.** The team signed off on the customer dashboard mockup (sidebar nav, balance card, account card, monthly money in/out, recent transactions, quick transfer). Build customer pages to match it, using the design tokens in `src/index.css` (add new colors there as tokens, not raw hex in components) and the shared components in `src/components/ui/`. Staff and admin pages stay minimal and unstyled until their designs are approved.
 - **The backend is not ready yet.** All API calls go through the mock layer (see below).
 
 ## Folder structure
@@ -21,8 +21,10 @@ The backend is a separate repo (Node.js + Express + MongoDB). This repo is the R
 src/
   api/          axios instance + one file per resource (auth, accounts, transactions, notifications, users, admin)
   mocks/        mock data used when VITE_USE_MOCK=true
-  context/      AuthContext (user, token, role, login, logout)
-  components/   shared components (Navbar, ProtectedRoute, etc.)
+  context/      AuthContext (user, token, role, login, logout), PrivacyContext (hide balance and account details)
+  components/   shared components used by every role: Header (the slim pinned top bar: menu button and logo on phones, bell and avatar), PageTitle (the greeting or page title, which scrolls with the page), AccountMenu (avatar menu), ProfileDetails, ChangePassword; plus Navbar, ProtectedRoute, etc.
+    ui/         reusable pieces: Button, Card, Input, Modal, Toast, StatusBadge, Amount, Sensitive, Skeleton, icons
+    customer/   customer dashboard pieces (Sidebar, HeaderActions, NotificationBell, AccountCard, TransactionRow, QuickTransfer, ...). staff/ and admin/ hold each role's Sidebar and pageTitles.
   layouts/      CustomerLayout, StaffLayout, AdminLayout
   pages/
     auth/       Login, Register
@@ -36,6 +38,10 @@ src/
 
 - **Pages never call axios directly.** They call functions in `src/api/`. Only the api files know whether data is mocked or real.
 - **Mock switch:** every api function checks `import.meta.env.VITE_USE_MOCK`. If it's `"true"`, return mock data after a short delay; otherwise call the real endpoint. Mock responses must have exactly the same shape as real ones.
+- **Mock scenarios:** with `VITE_USE_MOCK=true`, open any page with `?scenario=frozen` (frozen account) `?scenario=new` (brand-new customer) or `?scenario=error` (the notifications calls fail) to see those states. `?scenario=default` turns it off.
+- **Voice:** English is the main language. Light Taglish touches go only in warm moments (greeting, success messages, empty states, a few labels like "Net ngayong buwan"), with `lang="fil"` on the Filipino words. Errors, frozen or held states, and anything about money rules stay in plain English. Have a Filipino speaker check new strings.
+- **Page titles:** each customer page's title lives in `src/components/customer/pageTitles.js` and shows in the header's left slot (the overview shows the greeting there instead). Pages don't draw their own big heading; when you add a customer page, add its title to that file.
+- **Private values:** wrap balances, account numbers and totals in `<Sensitive>` so the dashboard's "hide details" eye button covers them all.
 - **Response shape** (from the backend, and from mocks):
   - success: `{ success: true, data: ... }`
   - error: `{ success: false, message: "..." }`
@@ -55,8 +61,8 @@ src/
 | Role     | What they do                                                                                                                                                                            |
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | customer | View their account and balance, cash in, transfer, view transaction history, cancel own pending transactions, manage profile and notification preferences, view and clear notifications |
-| staff    | View customers and accounts, verify customers, view all transactions, flag or cancel suspicious transactions, freeze or reactivate accounts                                             |
-| admin    | Everything staff can view, plus create staff accounts, change user roles and status, view audit logs and notification logs                                                              |
+| staff    | Bank officers: view customers (balance on detail only), verify customers, freeze, reactivate or close bank accounts (closing also closes the customer's login), approve, flag or cancel held transfers |
+| admin    | IT and people only (least privilege): create and close staff accounts, reset customer passwords, read-only audit log and notification metadata. No money data, and no disabling users. Roles are fixed at creation. |
 
 ## Domain decisions
 
@@ -64,19 +70,23 @@ src/
 - **Transactions have only two types: `cash_in` and `transfer`.** There is **no cash-out or withdrawal** feature. Do not create functions, mock data, or UI for it.
   - `cash_in`: adds simulated funds to the customer's own account (no real money).
   - `transfer`: sends funds to another account by account number. Must check: amount > 0, sufficient balance, both accounts active, not the same account.
+  - There is no transfer limit. Transfers **under ₱50,000** complete immediately, with no approval. Transfers of **₱50,000 or more** need bank approval before they go through (the threshold lives in `src/utils/transferRules.js`; whether exactly ₱50,000 needs approval is an **assumption to confirm with the backend**). The same holds for `holdForReview: true`. A held transfer is `pending` with `flagReason: "Held for staff review"`: the sender is already charged, the recipient isn't credited yet.
+  - Only the sender can cancel, and only a `pending` transfer; the amount is refunded to the sender. A `flagged` transfer is under review, so only staff can end it.
+  - **Flagging starts an ID check.** Staff can flag a `pending` transfer: no money moves, the transfer becomes `flagged`, and the sender is asked to attach a document that shows the transfer is theirs, usually a photo of a valid ID. **Uploading is simulated:** the dialog attaches a sample file and only its name is sent, so no file is ever stored. Staff can only approve it once that ID is in; rejecting stays available so a sender who never answers can't leave it stuck. The backend supports it (staff flag through `PATCH /staff/transactions/:id/status`, the sender answers through `POST /transactions/:id/verification`); see `docs/flagged-transfer-verification.md`.
+  - Customers don't see incoming transfers until they're `completed`.
 - **Transaction statuses:** `pending`, `completed`, `failed`, `cancelled`, `flagged`.
 - **Account statuses:** `active`, `frozen`, `closed`.
-- **User statuses:** `active`, `deactivated` (by the customer), `disabled` or `closed` (by an admin).
+- **User statuses:** `active`, `deactivated` (by the customer), `closed` (a staff user closed by an admin, or a customer closed by staff when their bank account is closed). Nobody disables or re-enables users; `disabled` is no longer used.
 - **Cancelled transactions are never deleted.** They stay on record with status `cancelled`.
 
 ## Data shapes (from the backend's Mongoose schemas)
 
 Mock data must use these exact field names. IDs are strings (`_id`); dates are ISO strings; amounts and balances are integers in centavos.
 
-- **User:** `_id`, `name`, `email`, `contactNumber`, `role` (`customer` | `staff` | `admin`), `status`, `isVerified` (boolean), `notificationPreferences` (`{ email: true, sms: false }`), `createdAt`, `updatedAt`. Never expose `passwordHash`.
-- **BankAccount:** `_id`, `accountNumber`, `owner` (user `_id`), `balance`, `status` (`active` | `frozen` | `closed`), `createdAt`.
-- **Transaction:** `_id`, `referenceNumber`, `transactionType` (`cash_in` | `transfer`), `amount`, `sourceAccount` (empty for `cash_in`), `destinationAccount`, `performedBy` (user `_id`), `status`, `flagReason` (optional), `createdAt`, `updatedAt`.
-- **Notification:** `_id`, `recipient` (user `_id`), `type` (`transaction` | `account` | `security` | `system`), `message`, `relatedTransaction` (optional), `isRead` (boolean), `createdAt`.
+- **User:** `_id`, `name`, `email`, `contactNumber` (optional; omitted when not set, never sent as `""`), `role` (`customer` | `staff` | `admin`), `status`, `isVerified` (boolean), `notificationPreferences` (`{ email: true, sms: false }`), `createdAt`, `updatedAt`. Never expose `passwordHash`.
+- **BankAccount:** `_id`, `accountNumber` (12 digits, no spaces; format only for display), `owner` (user `_id`), `balance`, `status` (`active` | `frozen` | `closed`), `cardLastFour` (4 digits; **assumption to confirm with the backend**), `createdAt`, `updatedAt`. The card number is not the account number. The full card number is never in account responses; it comes only from `POST /accounts/me/card-details`.
+- **Transaction:** `_id`, `referenceNumber`, `transactionType` (`cash_in` | `transfer`), `amount`, `sourceAccount` (empty for `cash_in`), `destinationAccount` (customer responses carry each account as `{ _id, accountNumber }`; this is an **assumption to confirm with the backend**, handled only in `src/utils/transactions.js`), `performedBy` (user `_id`), `status`, `flagReason` (`null` unless flagged or held for review), `verification` (only on a flagged transfer: the ID check the sender goes through, `{ status: "requested" | "submitted", requestedAt, submittedAt, documentName }`; **assumption to confirm with the backend**, see `docs/flagged-transfer-verification.md`), `note` (the sender's note on a transfer: optional, omitted when there is none, but the UI requires it as a reason when the transfer needs approval; **assumption to confirm with the backend**), `createdAt`, `updatedAt`.
+- **Notification:** `_id`, `recipient` (user `_id`), `type` (`transaction` | `account` | `security` | `system`), `message` (free text; the UI never reads it for icons or behavior; it must never contain a full account number, use "account ending 1234" instead, **to confirm with the backend**), `relatedTransaction` (transaction `_id`, unpopulated, or `null`), `isRead` (boolean), `createdAt`, `updatedAt`.
 - **AuditLog:** `_id`, `actor` (user `_id`), `action`, `targetType` (`User` | `BankAccount` | `Transaction`), `targetId`, `createdAt`.
 
 ## Backend endpoints (base: `VITE_API_URL`)
@@ -87,41 +97,70 @@ Mock data must use these exact field names. IDs are strings (`_id`); dates are I
 
 **Customer profile**
 
-- `PATCH /users/me` (name, email, contact number)
-- `PATCH /users/me/password`
-- `PATCH /users/me/notification-preferences`
-- `PATCH /users/me/deactivate`
+- `PATCH /users/me` (customers only; staff and admins get 403) with `{ name, email, contactNumber }`: name and email required, email lowercased; `contactNumber` is `09XXXXXXXXX` or `+639XXXXXXXXX` (saved as `09…`), and empty or missing removes it. Another active user with the same email or number gives 409 "Email or contact number already used". Answers with the updated user, the same shape as `/auth/me`. The profile card edits these in place.
+- `PATCH /users/me/password` (every role) with `{ currentPassword, newPassword }`: new is at least 8 characters (the UI also asks for a letter and a number, like Register); wrong current gives "Incorrect password", reusing it gives "Choose a password you haven't used here before". Answers `{ success: true, message }` with no data; the session stays valid. The backend sends a `security` notification.
+- `PATCH /users/me/notification-preferences` with `{ email?, sms? }` (booleans, either or both) → the updated user. Each switch on the profile page saves as soon as it's flipped. SMS can only be turned on when the user has a mobile number, and removing the number in Your details turns SMS off. Nothing sends email or SMS yet; it only records the choice.
+- `PATCH /users/me/deactivate` (customers only, no body): refused while the balance isn't 0 or a transfer in or out is `pending` or `flagged`. Otherwise the user becomes `deactivated` (login refuses them) and their bank account is frozen. Answers with the updated user. The UI then logs out and shows a notice on the login page.
 
 **Accounts**
 
-- `GET /accounts/me`, `GET /accounts/me/balance`, `GET /accounts/:id`
+- `GET /accounts/me`
+- `GET /accounts/me/balance` → `{ accountNumber, balance, status }`
+- `POST /accounts/me/card-details` with `{ password }` → `data: { cardNumber (16 digits, no spaces), cardExpiry ("MM/YY"), cardCvc }`. Needs the customer's password and a verified account; wrong password → `{ success: false, message: "Incorrect password" }`. Assumed, to be confirmed. The dashboard never stores the result: it lives in the modal only. In mock mode the password is `Password123`.
+- `GET /accounts/lookup/:accountNumber` (checks a transfer recipient; assumed response `{ accountNumber, displayName, initials }`, to be confirmed)
+- `GET /accounts/:id` (customers: own account only)
 
 **Transactions**
 
 - `POST /transactions/cash-in`
-- `POST /transactions/transfer`
-- `GET /transactions`
+- `POST /transactions/transfer` with `{ recipientAccountNumber, amount, holdForReview?, note? }` (`note`: up to 200 characters, optional, but the UI requires it when the amount is ₱50,000 or more; assumed, to be confirmed)
+- `GET /transactions` with `?status=&type=&search=&page=&limit=` (`search` is **assumed, to be confirmed**: a single text term matched against the reference number, either account number, and the amount in pesos, e.g. `500` or `1,250.50`; the date filter is sent as `period` (`7d`, `30d`, `month`, `3m` or `custom`) plus `from` and `to` as `YYYY-MM-DD` days, both included, for `custom`; also **assumed, to be confirmed**) → `data: { transactions, pagination: { page, limit, total, totalPages }, counts: { all, completed, pending, failed, cancelled, flagged }, summary: { moneyInThisMonth, moneyOutThisMonth } }`. `counts` is **assumed, to be confirmed**: counted with `type`, `search` and the date filter applied but `status` ignored, so each status tab shows how many rows it would give. `summary` is always this month's, whatever the filters.
 - `GET /transactions/:id`
 - `PATCH /transactions/:id/cancel`
+- `POST /transactions/:id/verification` with `{ documentName }` (the sender attaches a document for a flagged transfer; plain JSON, no file is uploaded; built on the backend, see `docs/flagged-transfer-verification.md`)
 
 **Notifications**
 
-- `GET /notifications`
+- `GET /notifications` → `data: [notifications]`, a plain array, newest first, no totals. Supports `?page=&limit=` (default 50, max 100); a full page means there may be more. The unread count is worked out on the client.
 - `PATCH /notifications/:id/read`, `PATCH /notifications/read-all`
 - `DELETE /notifications/:id`, `DELETE /notifications`
+- Mark one read returns the updated notification as `data`. Mark all, delete and clear return `{ success: true, message }` with no `data`.
 
-**Admin / staff**
+**Admin** (`/api/admin/*`, admin only; see the Least-Privilege Alignment Guide)
 
-- `POST /admin/staff` (admin)
-- `GET /admin/users`, `GET /admin/users/:id` (admin, staff)
-- `PATCH /admin/users/:id/status` (admin)
-- `PATCH /admin/users/:id/role` (admin)
-- `PATCH /admin/users/:id/verify` (admin, staff)
-- `GET /admin/accounts`, `PATCH /admin/accounts/:id/status` (admin, staff)
-- `GET /admin/transactions`, `PATCH /admin/transactions/:id/status` (admin, staff)
-- `GET /admin/audit-logs`, `GET /admin/notifications` (admin)
+- `POST /admin/staff`
+- `GET /admin/users`, `GET /admin/users/:id` (identity and access fields only: no balances or account numbers)
+- `PATCH /admin/users/:id/status` with `{ status: "closed" }` only, and only for staff users (admins can't close themselves; customers are closed by staff, through their bank account)
+- `PATCH /admin/users/:id/reset-password` (customers only; returns `{ temporaryPassword }` once and sets `mustChangePassword`)
+- `GET /admin/audit-logs` (read-only)
+- `GET /admin/notifications` (metadata only: recipient, type, isRead, createdAt; no message)
+- No role endpoint: roles are fixed at creation.
+
+**Audit actions:** `staff.create`, `user.status_update`, `user.password_reset`, `user.verify`, `account.status_update`, `transaction.status_update`. In the frontend, admin calls live in `src/api/admin.js` and staff calls in `src/api/staff.js`.
+
+**Staff** (staff only, see `docs/least-privilege-guide.md`; all **assumed, to be confirmed** with the backend; called from `src/api/staff.js`)
+
+- `GET /staff/customers` → `data: [customers]`, customers only, newest first. Each is `{ _id, name, email, contactNumber?, status, isVerified, createdAt, updatedAt, account: { _id, accountNumber, status } }` (no balance, role or preferences).
+- `GET /staff/customers/:id` → the same customer, with `account.balance` added.
+- `PATCH /staff/customers/:id/verify` (no body; active, unverified customers only) → the updated customer.
+- `GET /staff/accounts` → `data: [accounts]`, newest first: `{ _id, accountNumber, owner, balance, status, createdAt, updatedAt }` (no card fields). Here `owner` is **populated** as `{ _id, name, email }`, not a plain id: this follows what the backend sends. The staff pages read the owner's name and email from it, with no separate customers call.
+- **Freeze and reactivate** use the backend's own routes: `PATCH /accounts/:id/freeze` with `{ reason }` (required) and `PATCH /accounts/:id/unfreeze` (no body). Both answer `data: { id, status }`, not the whole account, and are staff only.
+- **Close** uses the backend's `PATCH /staff/customers/:id/status`, where `:id` is the **customer's** id, not the account's. Body `{ status: "closed" }`; the backend ignores `reason` (we still send it). It answers with the updated **user**, not the account, and closes the owner's bank account and login together. It does **not** yet check that the balance is 0 or that no transfer is `pending` or `flagged`, so those rules are only enforced in the mock. A closed account can't change. Closing is permanent and also closes the owner's user; it's refused unless the balance is 0 and no transfer is `pending` or `flagged` in or out of the account. Only staff close customers; admin's user status endpoint can't close a customer.
+- `GET /staff/transactions` → `data: [transactions]`, newest first, each account as `{ _id, accountNumber }`.
+- `PATCH /staff/transactions/:id/status` with `{ status, reason? }` → the updated transaction. Transfers only: approve (`completed`) or cancel (`cancelled`) from `pending` or `flagged`; flag (`flagged`, `reason` required) from `pending` only. Approving credits the recipient; cancelling refunds the sender.
 
 If an endpoint or field changes, update this file and tell the backend pair, so both repos stay in sync.
+
+## Deployment
+
+- **Frontend:** Vercel project `sinop-bank` → `https://sinop-bank.vercel.app`. **Backend:** Render service `sinop-backend` → `https://sinop-backend.onrender.com` (the backend repo has its own notes).
+- **The addresses must match in these places.** If either host changes, change all of them:
+  - `vercel.json`: the Content-Security-Policy `connect-src` must list the Render URL, or the browser blocks every API call.
+  - `index.html` (`og:url`, `og:image`), `public/robots.txt` and `public/sitemap.xml`: the Vercel URL.
+  - Vercel environment variables: `VITE_API_URL` (the Render URL + `/api`, https), `VITE_SITE_URL` (the Vercel URL) and `VITE_USE_MOCK=false`. They are read at build time, so **redeploy** after changing one.
+  - Render environment variable `CLIENT_URL`: the Vercel URL, https, no trailing slash. The backend allows only that one origin, so Vercel preview URLs get CORS errors.
+- A Vercel build fails on purpose if `VITE_API_URL` isn't https or `VITE_USE_MOCK` is `true` (see `vite.config.js`).
+- Render's free plan sleeps after about 15 minutes idle; the first request takes up to a minute (the axios timeout is 70s). Wake it with `/api/health` before a demo.
 
 ## Git workflow
 

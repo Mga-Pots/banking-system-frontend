@@ -27,3 +27,15 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# AI tooling (local only)
+.agent/
+.agents/
+.claude/
+.codex/
+.gemini/
+.impeccable/
+PRODUCT.md
+
+# Local notes
+docs/
