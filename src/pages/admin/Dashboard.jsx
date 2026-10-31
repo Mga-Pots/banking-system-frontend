@@ -1,34 +1,52 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Card from '../../components/ui/Card'
-import Button from '../../components/ui/Button'
 import Skeleton from '../../components/ui/Skeleton'
-import ErrorState, { ServerMessage } from '../../components/ui/ErrorState'
-import Weave from '../../components/ui/Weave'
-import { ChevronDownIcon, KeyIcon, LockIcon, ShieldIcon, UserPlusIcon, UsersIcon } from '../../components/ui/Icons'
-import { Avatar, StatCard, Tag } from '../../components/admin/AdminBits'
+import ErrorState from '../../components/ui/ErrorState'
+import { ChevronDownIcon, KeyIcon, LockIcon, ShieldIcon, UserPlusIcon } from '../../components/ui/Icons'
+import { Avatar, Tag } from '../../components/admin/AdminBits'
 import { useAuth } from '../../context/AuthContext'
 import { getAuditLogs, getNotificationLogs, getUsers } from '../../api/admin'
 import { ACCESS_ACTIONS, TYPE_LABELS, describeLog } from '../../utils/auditText'
-import { isToday, withinDays } from '../../utils/dates'
+import { withinDays } from '../../utils/dates'
 import { formatRelative } from '../../utils/formatDate'
 import { peopleIndex } from '../../utils/people'
 import { LOADING, combine, keepData, retrying, settle } from '../../utils/loadResults'
 
 const accessIcons = { 'staff.create': UserPlusIcon, 'user.password_reset': KeyIcon, 'user.status_update': LockIcon }
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`
 
-function CardHeader({ title, link, to }) {
+// Same as the staff overview: title on the left, "See all" on the right.
+// `label` names the destination for screen readers, since every link reads "See all".
+function CardHeader({ title, label, to }) {
   return (
     <div className="flex items-center justify-between gap-4 pb-2">
       <h2 className="text-xl font-bold text-text">{title}</h2>
       <Link
         to={to}
-        className="-my-3 inline-flex items-center gap-1 py-3 text-sm font-bold text-wallet hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
+        aria-label={label}
+        className="-my-3 inline-flex shrink-0 items-center gap-1 py-3 text-sm font-bold text-wallet hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet"
       >
-        {link}
+        See all
         <ChevronDownIcon size={16} className="-rotate-90" />
       </Link>
+    </div>
+  )
+}
+
+// One figure in the summary card, like the staff overview. On phones the count sits
+// to the right of the label; from `sm` the three figures stand side by side.
+function SummaryItem({ label, value, hint, loading, failed }) {
+  return (
+    <div className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 py-4 first:pt-0 last:pb-0 sm:grid-cols-1 sm:px-6 sm:py-0 sm:first:pl-0 sm:last:pr-0">
+      <dt className="col-start-1 row-start-1 text-xs font-bold tracking-wider text-muted uppercase">{label}</dt>
+      <dd className="col-start-2 row-span-2 row-start-1 sm:col-start-1 sm:row-span-1 sm:row-start-2">
+        {loading ? (
+          <Skeleton className="h-7 w-10" />
+        ) : (
+          <span className="font-brand text-xl font-semibold text-ink tabular-nums">{failed ? '–' : value}</span>
+        )}
+      </dd>
+      <dd className="col-start-1 row-start-2 text-sm text-muted sm:row-start-3">{failed ? 'Couldn’t load' : hint}</dd>
     </div>
   )
 }
@@ -84,12 +102,10 @@ export default function AdminDashboard() {
   const notifs = sections.notifs.data ?? []
   const notifsLoading = sections.notifs.status === 'loading'
   const notifsFailed = !notifsLoading && !sections.notifs.data
-  const notifsToday = notifs.filter((n) => isToday(n.createdAt))
   const userById = peopleIndex(users, [...logs.map((l) => l.actorInfo), ...notifs.map((n) => n.recipientInfo)])
   const byRole = (r) => users.filter((u) => u.role === r)
   const staff = byRole('staff')
   const sorted = [...logs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-  const countLogs = (action, test) => logs.filter((l) => l.action === action && test(l.createdAt)).length
 
   const staffActivity = sorted.filter((l) => (userById[l.actor]?.role ?? l.actorRole) === 'staff').slice(0, 5)
   const accessChanges = sorted.filter((l) => ACCESS_ACTIONS.includes(l.action)).slice(0, 4)
@@ -98,147 +114,46 @@ export default function AdminDashboard() {
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 3)
 
+  const customers = byRole('customer')
+  const activeStaff = staff.filter((u) => u.status === 'active').length
+  const alertsThisWeek = notifs.filter((n) => n.type === 'security' && withinDays(n.createdAt, 7))
+
   return (
     <>
       <h1 className="sr-only">Admin overview</h1>
 
+      {/* One summary card, like the staff overview: the counts sum up the lists below */}
+      <Card className="mb-6">
+        <dl className="divide-y divide-divider sm:grid sm:grid-cols-3 sm:divide-x sm:divide-y-0 lg:grid-cols-[1fr_1fr_295px]">
+          <SummaryItem
+            label="Staff"
+            value={staff.length}
+            hint={`${activeStaff} active · ${staff.length - activeStaff} closed`}
+            loading={usersLoading}
+            failed={usersFailed}
+          />
+          <SummaryItem
+            label="Customers"
+            value={customers.length}
+            hint={`${customers.filter((u) => withinDays(u.createdAt, 7)).length} new this week`}
+            loading={usersLoading}
+            failed={usersFailed}
+          />
+          <SummaryItem
+            label="Security alerts"
+            value={alertsThisWeek.length}
+            hint="Sent this week"
+            loading={notifsLoading}
+            failed={notifsFailed}
+          />
+        </dl>
+      </Card>
+
+      {/* Same columns as the customer and staff overviews */}
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="flex min-w-0 flex-col gap-6">
-          {/* Deep-green banner, same as the customer one, but about people, not money */}
-          <section
-            aria-label="People on sinop"
-            aria-busy={usersLoading}
-            className="relative isolate grid gap-6 overflow-hidden rounded-[20px] bg-ink p-6 text-white md:grid-cols-[1fr_300px]"
-          >
-            <Weave className="text-white [mask-image:linear-gradient(to_left,black,transparent_80%)]" opacity={0.1} />
-            <div className="relative flex flex-col justify-between gap-6">
-              <div>
-                <p className="text-[15px] text-white/80">People on sinop</p>
-                {usersLoading ? (
-                  <Skeleton className="mt-2 h-11 w-32 bg-white/10" />
-                ) : usersFailed ? (
-                  <div role="alert" className="mt-2">
-                    <p className="font-brand text-[22px] leading-tight font-bold">We couldn’t load users</p>
-                    <ServerMessage message={sections.users.error} color="text-white/80" className="mt-1 text-sm" />
-                  </div>
-                ) : (
-                  <p className="mt-2 font-brand text-[44px] leading-none font-bold tabular-nums">
-                    {users.length.toLocaleString('en-US')}
-                  </p>
-                )}
-                {!usersFailed && (
-                  <ul className="mt-3 flex flex-wrap gap-2">
-                    {[
-                      plural(byRole('customer').length, 'customer'),
-                      `${staff.length} staff`,
-                      plural(byRole('admin').length, 'admin'),
-                    ].map((t) => (
-                      <li key={t} className="rounded-full bg-white/12 px-3 py-1 text-[13px] font-semibold">
-                        {usersLoading ? '–' : t}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Button variant="accent" size="lg" to="/admin/create-staff">
-                  <UserPlusIcon size={18} />
-                  Create staff
-                </Button>
-                <Button variant="ghost" size="lg" to="/admin/users">
-                  <UsersIcon size={18} />
-                  Manage staff
-                </Button>
-              </div>
-            </div>
-
-            <div className="relative flex flex-col gap-3.5 rounded-2xl border border-white/15 bg-linear-to-br from-white/15 to-white/5 p-5 backdrop-blur-sm">
-              <div className="flex items-center justify-between">
-                <span className="font-brand text-xl font-bold">Today</span>
-                <span className="rounded-full border border-accent px-3 py-1 text-xs font-bold tracking-wider text-accent uppercase">
-                  Live
-                </span>
-              </div>
-              {/* Each row: label, value, and whether its data is missing (loading or failed) */}
-              {[
-                ['New sign-ups', byRole('customer').filter((u) => isToday(u.createdAt)).length, !sections.users.data],
-                ['Staff created', countLogs('staff.create', isToday), !sections.logs.data],
-                ['Staff closed', countLogs('user.status_update', isToday), !sections.logs.data],
-              ].map(([label, value, missing]) => (
-                <div key={label} className="flex items-center justify-between text-sm">
-                  <span className="text-white/80">{label}</span>
-                  <span className="font-brand text-[15px] font-semibold tabular-nums">{missing ? '–' : value}</span>
-                </div>
-              ))}
-              {logsFailed && <p className="text-[13px] text-white/80">Audit log activity couldn’t load.</p>}
-            </div>
-          </section>
-
-          <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-            <StatCard
-              label="Staff accounts"
-              value={staff.length}
-              hint={`${staff.filter((u) => u.status === 'active').length} active, ${staff.filter((u) => u.status === 'closed').length} closed`}
-              loading={usersLoading}
-              failed={usersFailed}
-            />
-            <StatCard
-              label="New sign-ups"
-              value={byRole('customer').filter((u) => withinDays(u.createdAt, 7)).length}
-              hint="This week"
-              loading={usersLoading}
-              failed={usersFailed}
-            />
-            <StatCard
-              label="Closed accounts"
-              value={users.filter((u) => u.status === 'closed').length}
-              hint="Can’t log in anymore"
-              loading={usersLoading}
-              failed={usersFailed}
-            />
-            <StatCard
-              label="Staff closed"
-              value={countLogs('user.status_update', (d) => withinDays(d, 7))}
-              hint="This week"
-              loading={logsLoading}
-              failed={logsFailed}
-            />
-          </div>
-
-          {/* Notification metadata (moved here from the Notification log page) */}
-          <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-            <StatCard
-              label="Notifications today"
-              value={notifsToday.length}
-              hint={`To ${plural(new Set(notifsToday.map((n) => n.recipient)).size, 'user')}`}
-              loading={notifsLoading}
-              failed={notifsFailed}
-            />
-            <StatCard
-              label="Unread"
-              value={notifs.filter((n) => !n.isRead).length}
-              hint="Across all users"
-              loading={notifsLoading}
-              failed={notifsFailed}
-            />
-            <StatCard
-              label="Security alerts"
-              value={notifs.filter((n) => n.type === 'security').length}
-              hint="Logins and access"
-              loading={notifsLoading}
-              failed={notifsFailed}
-            />
-            <StatCard
-              label="Account alerts"
-              value={notifs.filter((n) => n.type === 'account').length}
-              hint="Verified, frozen, or closed"
-              loading={notifsLoading}
-              failed={notifsFailed}
-            />
-          </div>
-
           <Card>
-            <CardHeader title="Staff activity" link="Audit log" to="/admin/audit-log" />
+            <CardHeader title="Staff activity" label="See the whole audit log" to="/admin/audit-log" />
             {activity.status === 'loading' ? (
               <Skeleton className="h-40" />
             ) : !activity.data ? (
@@ -274,7 +189,7 @@ export default function AdminDashboard() {
 
         <div className="flex min-w-0 flex-col gap-6">
           <Card>
-            <CardHeader title="Access changes" link="All" to="/admin/audit-log" />
+            <CardHeader title="Access changes" label="See all access changes in the audit log" to="/admin/audit-log" />
             {logsLoading ? (
               <Skeleton className="h-32" />
             ) : logsFailed ? (
@@ -305,7 +220,7 @@ export default function AdminDashboard() {
           </Card>
 
           <Card>
-            <CardHeader title="Security alerts sent" link="Log" to="/admin/notification-log" />
+            <CardHeader title="Security alerts" label="See the notification log" to="/admin/notification-log" />
             {sections.notifs.status === 'loading' ? (
               <Skeleton className="h-28" />
             ) : !sections.notifs.data ? (
