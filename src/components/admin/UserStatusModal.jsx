@@ -13,18 +13,19 @@ const ACTIONS = {
     body: (name) => `${name} loses access right away and is logged out. Their past work stays in the audit log.`,
     button: 'Close account',
     variant: 'danger',
-    confirmWord: 'CLOSE',
+    confirmWithEmail: true,
   },
 }
 
-// Confirms closing a staff account. The admin types CLOSE first, since it can't be undone.
+// Confirms closing a staff account. The admin types the staff member's email first,
+// so they can't close the wrong person out of habit (it can't be undone).
 export default function UserStatusModal({ user, action, onClose, onSaved }) {
   const a = ACTIONS[action]
   const [typed, setTyped] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const ready = !a.confirmWord || typed.trim().toUpperCase() === a.confirmWord
+  const ready = !a.confirmWithEmail || typed.trim().toLowerCase() === user.email.toLowerCase()
 
   const handleConfirm = async () => {
     setError('')
@@ -42,17 +43,23 @@ export default function UserStatusModal({ user, action, onClose, onSaved }) {
     <Modal title={a.title(user.name)} onClose={onClose}>
       <div className="flex flex-col gap-5">
         {a.body && <p className="-mt-2 text-sm text-label">{a.body(user.name)}</p>}
-        {a.confirmWord && (
+        {a.confirmWithEmail && (
           <>
             <p className="-mt-2 rounded-xl bg-status-failed px-4 py-3.5 text-sm font-semibold text-status-failed-text">
               This can’t be undone. {user.name}’s records are kept, but the account can never be used again.
             </p>
             <Input
               id="close-confirm"
-              label={`Type ${a.confirmWord} to confirm`}
+              label={
+                <>
+                  Type <span className="font-mono">{user.email}</span> to confirm
+                </>
+              }
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
               autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
             />
           </>
         )}
