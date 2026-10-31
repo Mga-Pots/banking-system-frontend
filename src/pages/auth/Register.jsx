@@ -128,7 +128,12 @@ export default function Register() {
   return (
     <AuthLayout
       title="Start saving the smart way."
-      subtitle="Create your sinop account in a minute. All you need is your name and email."
+      subtitle={
+        <>
+          <span lang="fil">Maging masinop sa pera.</span> Send money, cash in, and keep track of every peso, all in one
+          place.
+        </>
+      }
     >
       <Seo title="Create an account" path="/register" index />
       <form
