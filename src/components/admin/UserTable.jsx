@@ -22,7 +22,7 @@ export default function UserTable({ users, meId, onPick, showIdCheck = true, man
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-left">
+        <table className="w-full min-w-[520px] border-collapse text-left">
           <thead>
             <tr className="border-t border-divider text-xs font-bold tracking-wider text-muted uppercase">
               <th scope="col" className="py-3 pr-4 font-bold">Name</th>
