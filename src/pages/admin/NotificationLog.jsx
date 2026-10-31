@@ -106,13 +106,13 @@ export default function AdminNotificationLog() {
           <Skeleton className="h-72" />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[620px] border-collapse text-left">
+            <table className="w-full min-w-[500px] border-collapse text-left">
               <thead>
                 <tr className="border-t border-divider text-xs font-bold tracking-wider text-muted uppercase">
-                  <th scope="col" className="w-[110px] py-3 pr-4 font-bold">When</th>
+                  <th scope="col" className="w-[96px] py-3 pr-4 font-bold">When</th>
                   <th scope="col" className="py-3 pr-4 font-bold">Recipient</th>
-                  <th scope="col" className="w-[150px] py-3 pr-4 font-bold">Type</th>
-                  <th scope="col" className="w-[110px] py-3 font-bold">Status</th>
+                  <th scope="col" className="w-[130px] py-3 pr-4 font-bold">Type</th>
+                  <th scope="col" className="w-[96px] py-3 font-bold">Status</th>
                 </tr>
               </thead>
               <tbody>
