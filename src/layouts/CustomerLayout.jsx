@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 import Logo from '../components/auth/Logo'
 import Modal from '../components/ui/Modal'
+import Seo from '../components/Seo'
 import { MenuIcon } from '../components/ui/Icons'
 import { ToastProvider } from '../components/ui/Toast'
 import Header from '../components/customer/Header'
@@ -16,6 +17,7 @@ export default function CustomerLayout() {
 
   return (
     <PrivacyProvider>
+      <Seo title="My account" />
       <ToastProvider>
         <NotificationsProvider>
         <div className="min-h-dvh bg-canvas text-text md:grid md:grid-cols-[232px_1fr]">

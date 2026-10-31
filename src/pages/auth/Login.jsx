@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import AuthLayout from '../../components/auth/AuthLayout'
+import Seo from '../../components/Seo'
 import PasswordInput from '../../components/auth/PasswordInput'
 import RequiredMark from '../../components/auth/RequiredMark'
 import { inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from '../../components/auth/styles'
@@ -51,6 +52,7 @@ export default function Login() {
       title="Save a little, every day."
       subtitle="Send money, cash in, and keep track of every peso, all in one place."
     >
+      <Seo title="Log in" path="/login" index />
       <form className="flex w-full max-w-[400px] flex-col gap-5" onSubmit={handleSubmit} noValidate>
         <div>
           <h2 className="mb-1.5 text-[30px] font-extrabold tracking-[-0.8px]">Log in to sinop</h2>
