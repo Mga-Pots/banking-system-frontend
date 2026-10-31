@@ -1,25 +1,42 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import Card from '../ui/Card'
+import { useToast } from '../ui/Toast'
 import { useAuth } from '../../context/AuthContext'
+import { updateNotificationPreferences } from '../../api/users'
 
 // The backend's defaults, used when the user has no (or only some) preferences.
 const DEFAULTS = { email: true, sms: false }
 
-function Toggle({ id, label, checked, enabled }) {
+const messageOf = (err) => err.response?.data?.message ?? err.message
+
+// `locked` keeps a switch from being turned on (it can still be turned off), with `hint`
+// saying why.
+function Toggle({ id, label, checked, busy, locked = false, hint, onChange }) {
+  const blocked = locked && !checked
   return (
     <div className="flex items-center justify-between gap-4 border-t border-divider py-4 first:border-t-0">
-      <span id={id} className="text-sm font-bold text-text">
-        {label}
-      </span>
+      <div className="min-w-0">
+        <span id={id} className="block text-sm font-bold text-text">
+          {label}
+        </span>
+        {hint && (
+          <span id={`${id}-hint`} className="mt-0.5 block text-xs text-muted">
+            {hint}
+          </span>
+        )}
+      </div>
       <button
         type="button"
         role="switch"
         aria-checked={checked}
         aria-labelledby={id}
-        disabled={!enabled}
-        className={`relative h-7 w-12 shrink-0 rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet disabled:cursor-not-allowed disabled:opacity-50 ${
-          checked ? 'bg-wallet' : 'bg-field-line'
-        }`}
+        aria-describedby={hint ? `${id}-hint` : undefined}
+        aria-busy={busy || undefined}
+        disabled={busy || blocked}
+        onClick={() => onChange(!checked)}
+        className={`relative h-7 w-12 shrink-0 cursor-pointer rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wallet disabled:opacity-50 ${
+          busy ? 'disabled:cursor-wait' : 'disabled:cursor-not-allowed'
+        } ${checked ? 'bg-wallet' : 'bg-field-line'}`}
       >
         <span
           aria-hidden="true"
@@ -32,17 +49,34 @@ function Toggle({ id, label, checked, enabled }) {
   )
 }
 
-// Email and SMS preferences, read from the logged-in user. Display only for now: the
-// backend has no way to change them and nothing sends email or SMS yet, so the toggles
-// are disabled and nothing is saved anywhere.
-// TODO: when the backend adds an update endpoint (e.g. PATCH /users/me/notification-preferences),
-// add the save call in src/api/users.js, wire it to the toggles here, and pass `enabled`.
-export default function NotificationPreferences({ enabled = false }) {
-  const { user } = useAuth()
+// Email and SMS preferences (PATCH /users/me/notification-preferences). Each switch saves
+// on its own as soon as it's flipped: it moves at once, and moves back if saving fails.
+// Nothing sends email or SMS yet; this records what the customer wants.
+export default function NotificationPreferences() {
+  const { user, updateUser } = useAuth()
+  const { showToast } = useToast()
   const titleId = useId()
-  const prefs = user?.notificationPreferences
-  const email = typeof prefs?.email === 'boolean' ? prefs.email : DEFAULTS.email
-  const sms = typeof prefs?.sms === 'boolean' ? prefs.sms : DEFAULTS.sms
+  const [saving, setSaving] = useState(null) // 'email' | 'sms' while that switch saves
+  const [pending, setPending] = useState(null) // the value shown while saving
+
+  const hasMobile = Boolean(user?.contactNumber?.trim())
+  const saved = { ...DEFAULTS, ...user?.notificationPreferences }
+  const shown = pending ? { ...saved, ...pending } : saved
+
+  const change = async (field, value) => {
+    setSaving(field)
+    setPending({ [field]: value })
+    try {
+      const res = await updateNotificationPreferences({ [field]: value })
+      updateUser(res.data)
+      showToast(`${field === 'email' ? 'Email' : 'SMS'} notifications turned ${value ? 'on' : 'off'}.`)
+    } catch (err) {
+      showToast(`Couldn’t save that change: ${messageOf(err)}`)
+    } finally {
+      setSaving(null)
+      setPending(null)
+    }
+  }
 
   return (
     <Card aria-labelledby={titleId}>
@@ -50,10 +84,24 @@ export default function NotificationPreferences({ enabled = false }) {
         Notification preferences
       </h2>
       <div className="mt-2">
-        <Toggle id={`${titleId}-email`} label="Email notifications" checked={email} enabled={enabled} />
-        <Toggle id={`${titleId}-sms`} label="SMS notifications" checked={sms} enabled={enabled} />
+        <Toggle
+          id={`${titleId}-email`}
+          label="Email notifications"
+          checked={shown.email}
+          busy={saving !== null}
+          onChange={(value) => change('email', value)}
+        />
+        {/* SMS needs a mobile number: without one it can't be turned on (only off). */}
+        <Toggle
+          id={`${titleId}-sms`}
+          label="SMS notifications"
+          checked={shown.sms}
+          busy={saving !== null}
+          locked={!hasMobile}
+          hint={hasMobile ? undefined : 'Add a mobile number in Your details to turn this on.'}
+          onChange={(value) => change('sms', value)}
+        />
       </div>
-      {!enabled && <p className="mt-2 text-sm text-muted">Email and SMS alerts aren’t available yet.</p>}
     </Card>
   )
 }

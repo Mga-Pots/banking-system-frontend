@@ -6,7 +6,7 @@ import { CheckIcon, ShieldIcon } from './ui/Icons'
 import { useToast } from './ui/Toast'
 import { roleLabels } from './admin/roleLabels'
 import { useAuth } from '../context/AuthContext'
-import { updateMe } from '../api/users'
+import { updateMe, updateNotificationPreferences } from '../api/users'
 import { formatLongDate } from '../utils/formatDate'
 import { EMAIL_PATTERN, formatMobile, isValidMobile, toStoredMobile } from '../utils/contactDetails'
 
@@ -67,7 +67,12 @@ function EditDetails({ user, onDone }) {
         // Empty removes the saved number; the backend treats undefined the same way.
         contactNumber: toStoredMobile(form.mobile) || undefined,
       })
-      updateUser(res.data)
+      let saved = res.data
+      // SMS needs a mobile number: removing the number turns SMS notifications off too.
+      if (!saved.contactNumber && saved.notificationPreferences?.sms) {
+        saved = (await updateNotificationPreferences({ sms: false })).data
+      }
+      updateUser(saved)
       showToast('Your details are updated.')
       onDone()
     } catch (err) {
