@@ -131,7 +131,7 @@ export default function DeactivateAccount() {
             Stop using sinop. Your balance must be ₱0.00 and no transfer can be waiting.
           </p>
         </div>
-        <Button variant="secondary" className="shrink-0" onClick={() => setOpen(true)}>
+        <Button variant="danger" className="shrink-0" onClick={() => setOpen(true)}>
           Deactivate
         </Button>
       </div>
